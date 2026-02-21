@@ -7,6 +7,9 @@
 # OS
 .DS_Store
 
+# Worktrees
+.worktrees/
+
 # Test artifacts
 *.test
 cover.out
