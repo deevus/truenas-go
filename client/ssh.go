@@ -525,7 +525,7 @@ func (c *SSHClient) Version() truenas.Version {
 // WriteFile writes content to a file on the remote system using the TrueNAS
 // filesystem.file_receive API. This runs with root privileges via middleware,
 // allowing writes to paths that would otherwise require elevated permissions.
-func (c *SSHClient) WriteFile(ctx context.Context, path string, fileParams WriteFileParams) error {
+func (c *SSHClient) WriteFile(ctx context.Context, path string, fileParams truenas.WriteFileParams) error {
 	b64Content := base64.StdEncoding.EncodeToString(fileParams.Content)
 
 	// Convert nil UID/GID to -1 for the TrueNAS API (unchanged)

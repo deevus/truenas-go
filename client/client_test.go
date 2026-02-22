@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io/fs"
 	"testing"
+
+	truenas "github.com/deevus/truenas-go"
 )
 
 func TestMockClient_Call(t *testing.T) {
@@ -106,7 +108,7 @@ func TestMockClient_WriteFile_NilFunc(t *testing.T) {
 	mock := &MockClient{}
 	ctx := context.Background()
 
-	params := DefaultWriteFileParams([]byte("content"))
+	params := truenas.DefaultWriteFileParams([]byte("content"))
 	err := mock.WriteFile(ctx, "/test", params)
 	if err != nil {
 		t.Errorf("expected nil error for nil WriteFileFunc, got %v", err)
@@ -116,14 +118,14 @@ func TestMockClient_WriteFile_NilFunc(t *testing.T) {
 func TestMockClient_WriteFile_WithFunc(t *testing.T) {
 	called := false
 	mock := &MockClient{
-		WriteFileFunc: func(ctx context.Context, path string, params WriteFileParams) error {
+		WriteFileFunc: func(ctx context.Context, path string, params truenas.WriteFileParams) error {
 			called = true
 			return nil
 		},
 	}
 	ctx := context.Background()
 
-	params := DefaultWriteFileParams([]byte("content"))
+	params := truenas.DefaultWriteFileParams([]byte("content"))
 	err := mock.WriteFile(ctx, "/test", params)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
