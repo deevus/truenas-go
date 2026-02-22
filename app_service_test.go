@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -720,10 +721,12 @@ func TestAppService_CreateRegistry_NotFoundAfterCreate(t *testing.T) {
 
 	svc := NewAppService(mock, Version{})
 	reg, err := svc.CreateRegistry(context.Background(), CreateRegistryOpts{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("expected error for not found after create")
 	}
-	// GetRegistry returns nil, nil for not found - CreateRegistry passes that through
+	if !strings.Contains(err.Error(), "not found after create") {
+		t.Errorf("expected error to contain 'not found after create', got %q", err.Error())
+	}
 	if reg != nil {
 		t.Error("expected nil registry for not found after create")
 	}
@@ -986,10 +989,12 @@ func TestAppService_UpdateRegistry_NotFoundAfterUpdate(t *testing.T) {
 
 	svc := NewAppService(mock, Version{})
 	reg, err := svc.UpdateRegistry(context.Background(), 1, UpdateRegistryOpts{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("expected error for not found after update")
 	}
-	// GetRegistry returns nil, nil for not found - UpdateRegistry passes that through
+	if !strings.Contains(err.Error(), "not found after update") {
+		t.Errorf("expected error to contain 'not found after update', got %q", err.Error())
+	}
 	if reg != nil {
 		t.Error("expected nil registry for not found after update")
 	}

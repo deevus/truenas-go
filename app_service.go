@@ -190,7 +190,14 @@ func (s *AppService) CreateRegistry(ctx context.Context, opts CreateRegistryOpts
 		return nil, fmt.Errorf("parse create response: %w", err)
 	}
 
-	return s.GetRegistry(ctx, createResp.ID)
+	reg, err := s.GetRegistry(ctx, createResp.ID)
+	if err != nil {
+		return nil, err
+	}
+	if reg == nil {
+		return nil, fmt.Errorf("registry %d not found after create", createResp.ID)
+	}
+	return reg, nil
 }
 
 // GetRegistry returns a registry by ID, or nil if not found.
@@ -241,7 +248,14 @@ func (s *AppService) UpdateRegistry(ctx context.Context, id int64, opts UpdateRe
 		return nil, err
 	}
 
-	return s.GetRegistry(ctx, id)
+	reg, err := s.GetRegistry(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if reg == nil {
+		return nil, fmt.Errorf("registry %d not found after update", id)
+	}
+	return reg, nil
 }
 
 // DeleteRegistry deletes a registry by ID.
