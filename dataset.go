@@ -15,6 +15,8 @@ type DatasetResponse struct {
 	Volsize      SizePropertyField `json:"volsize"`
 	Volblocksize PropertyValue     `json:"volblocksize"`
 	Sparse       PropertyValue     `json:"sparse"`
+	Used         SizePropertyField `json:"used"`
+	Available    SizePropertyField `json:"available"`
 }
 
 // SizePropertyField represents a ZFS size property with a parsed numeric value and string representation.

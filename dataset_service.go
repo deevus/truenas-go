@@ -17,6 +17,8 @@ type Dataset struct {
 	Quota       int64
 	RefQuota    int64
 	Atime       string
+	Used        int64
+	Available   int64
 }
 
 // CreateDatasetOpts contains options for creating a filesystem dataset.
@@ -276,6 +278,8 @@ func datasetFromResponse(resp DatasetResponse) Dataset {
 		Quota:       resp.Quota.Parsed,
 		RefQuota:    resp.RefQuota.Parsed,
 		Atime:       resp.Atime.Value,
+		Used:        resp.Used.Parsed,
+		Available:   resp.Available.Parsed,
 	}
 }
 

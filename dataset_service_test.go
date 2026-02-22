@@ -933,6 +933,45 @@ func TestDatasetService_ListPools_AllFields(t *testing.T) {
 	}
 }
 
+func TestDatasetService_GetDataset_UsageFields(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return json.RawMessage(`[{
+				"id": "pool1/ds1",
+				"name": "pool1/ds1",
+				"pool": "pool1",
+				"type": "FILESYSTEM",
+				"mountpoint": "/mnt/pool1/ds1",
+				"comments": {"value": ""},
+				"compression": {"value": "lz4"},
+				"quota": {"parsed": 0, "value": "0"},
+				"refquota": {"parsed": 0, "value": "0"},
+				"atime": {"value": "on"},
+				"volsize": {"parsed": 0, "value": ""},
+				"volblocksize": {"value": ""},
+				"sparse": {"value": ""},
+				"used": {"parsed": 1073741824, "value": "1G"},
+				"available": {"parsed": 5368709120, "value": "5G"}
+			}]`), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	ds, err := svc.GetDataset(context.Background(), "pool1/ds1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ds == nil {
+		t.Fatal("expected non-nil dataset")
+	}
+	if ds.Used != 1073741824 {
+		t.Errorf("expected Used 1073741824, got %d", ds.Used)
+	}
+	if ds.Available != 5368709120 {
+		t.Errorf("expected Available 5368709120, got %d", ds.Available)
+	}
+}
+
 func TestDatasetFromResponse(t *testing.T) {
 	resp := DatasetResponse{
 		ID:          "pool1/ds1",
