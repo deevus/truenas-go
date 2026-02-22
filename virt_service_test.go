@@ -302,13 +302,13 @@ func TestVirtService_CreateInstance(t *testing.T) {
 
 	svc := NewVirtService(mock, Version{})
 	inst, err := svc.CreateInstance(context.Background(), CreateVirtInstanceOpts{
-		Name:      "myvm",
-		Type:      "VM",
-		Image:     "ubuntu/22.04",
-		CPU:       "2",
-		Memory:    2147483648,
-		Autostart: true,
-		Environment: map[string]string{"FOO": "bar", "BAZ": "qux"},
+		Name:         "myvm",
+		InstanceType: "VM",
+		Image:        "ubuntu/22.04",
+		CPU:          "2",
+		Memory:       2147483648,
+		Autostart:    true,
+		Environment:  map[string]string{"FOO": "bar", "BAZ": "qux"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -364,9 +364,9 @@ func TestVirtService_CreateInstance_WithDevices(t *testing.T) {
 
 	svc := NewVirtService(mock, Version{})
 	_, err := svc.CreateInstance(context.Background(), CreateVirtInstanceOpts{
-		Name:  "myvm",
-		Type:  "VM",
-		Image: "ubuntu/22.04",
+		Name:         "myvm",
+		InstanceType: "VM",
+		Image:        "ubuntu/22.04",
 		Devices: []VirtDeviceOpts{
 			{DevType: "DISK", Source: "/mnt/tank/data", Destination: "/data"},
 		},
@@ -385,8 +385,8 @@ func TestVirtService_CreateInstance_Error(t *testing.T) {
 
 	svc := NewVirtService(mock, Version{})
 	inst, err := svc.CreateInstance(context.Background(), CreateVirtInstanceOpts{
-		Name: "myvm",
-		Type: "VM",
+		Name:         "myvm",
+		InstanceType: "VM",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -1090,8 +1090,8 @@ func TestVirtInstanceFromResponse(t *testing.T) {
 	if len(inst.Aliases) != 1 {
 		t.Fatalf("expected 1 alias, got %d", len(inst.Aliases))
 	}
-	if inst.Aliases[0].Netmask != 24 {
-		t.Errorf("expected netmask 24, got %d", inst.Aliases[0].Netmask)
+	if inst.Aliases[0].Netmask == nil || *inst.Aliases[0].Netmask != 24 {
+		t.Errorf("expected netmask 24, got %v", inst.Aliases[0].Netmask)
 	}
 	if inst.Image.OS != "alpine" {
 		t.Errorf("expected image os alpine, got %s", inst.Image.OS)

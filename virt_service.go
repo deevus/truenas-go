@@ -42,19 +42,20 @@ type VirtInstance struct {
 type VirtAlias struct {
 	Type    string
 	Address string
-	Netmask int64
+	Netmask *int64
 }
 
 // CreateVirtInstanceOpts contains options for creating a virt instance.
 type CreateVirtInstanceOpts struct {
-	Name          string
-	Type          string
-	Image         string
-	CPU           string
-	Memory        int64
-	Autostart     bool
-	Environment   map[string]string
-	Devices       []VirtDeviceOpts
+	Name         string
+	InstanceType string
+	Image        string
+	CPU          string
+	Memory       int64
+	Autostart    bool
+	Environment  map[string]string
+	Devices      []VirtDeviceOpts
+	StoragePool  string
 }
 
 // UpdateVirtInstanceOpts contains options for updating a virt instance.
@@ -306,23 +307,26 @@ func virtAliasFromResponse(resp VirtInstanceAliasResponse) VirtAlias {
 	return VirtAlias{
 		Type:    resp.Type,
 		Address: resp.Address,
-		Netmask: derefInt64(resp.Netmask),
+		Netmask: resp.Netmask,
 	}
 }
 
 // virtInstanceCreateOptsToParams converts create options to API parameters.
 func virtInstanceCreateOptsToParams(opts CreateVirtInstanceOpts) map[string]any {
 	params := map[string]any{
-		"name":         opts.Name,
-		"instance_type": opts.Type,
-		"image":        opts.Image,
-		"cpu":          opts.CPU,
-		"memory":       opts.Memory,
-		"autostart":    opts.Autostart,
-		"environment":  opts.Environment,
+		"name":          opts.Name,
+		"instance_type": opts.InstanceType,
+		"image":         opts.Image,
+		"cpu":           opts.CPU,
+		"memory":        opts.Memory,
+		"autostart":     opts.Autostart,
+		"environment":   opts.Environment,
 	}
 	if len(opts.Devices) > 0 {
 		params["devices"] = virtDeviceOptsToParams(opts.Devices)
+	}
+	if opts.StoragePool != "" {
+		params["storage_pool"] = opts.StoragePool
 	}
 	return params
 }

@@ -25,6 +25,20 @@ func TestIsNotFoundError_ENOENT(t *testing.T) {
 	}
 }
 
+func TestIsNotFoundError_NotFound(t *testing.T) {
+	err := errors.New("resource not found")
+	if !isNotFoundError(err) {
+		t.Error("expected true for 'not found' error")
+	}
+}
+
+func TestIsNotFoundError_NoSuchInstance(t *testing.T) {
+	err := errors.New("no such instance")
+	if !isNotFoundError(err) {
+		t.Error("expected true for 'no such instance' error")
+	}
+}
+
 func TestIsNotFoundError_Unrelated(t *testing.T) {
 	err := errors.New("connection refused")
 	if isNotFoundError(err) {
