@@ -894,6 +894,84 @@ func TestDatasetService_ListPools_Error(t *testing.T) {
 	}
 }
 
+func TestDatasetService_ListPools_AllFields(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return json.RawMessage(`[{
+				"id": 1,
+				"name": "tank",
+				"path": "/mnt/tank",
+				"status": "ONLINE",
+				"size": 1099511627776,
+				"allocated": 549755813888,
+				"free": 549755813888
+			}]`), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	pools, err := svc.ListPools(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pools) != 1 {
+		t.Fatalf("expected 1 pool, got %d", len(pools))
+	}
+
+	pool := pools[0]
+	if pool.Status != "ONLINE" {
+		t.Errorf("expected Status ONLINE, got %s", pool.Status)
+	}
+	if pool.Size != 1099511627776 {
+		t.Errorf("expected Size 1099511627776, got %d", pool.Size)
+	}
+	if pool.Allocated != 549755813888 {
+		t.Errorf("expected Allocated 549755813888, got %d", pool.Allocated)
+	}
+	if pool.Free != 549755813888 {
+		t.Errorf("expected Free 549755813888, got %d", pool.Free)
+	}
+}
+
+func TestDatasetService_GetDataset_UsageFields(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return json.RawMessage(`[{
+				"id": "pool1/ds1",
+				"name": "pool1/ds1",
+				"pool": "pool1",
+				"type": "FILESYSTEM",
+				"mountpoint": "/mnt/pool1/ds1",
+				"comments": {"value": ""},
+				"compression": {"value": "lz4"},
+				"quota": {"parsed": 0, "value": "0"},
+				"refquota": {"parsed": 0, "value": "0"},
+				"atime": {"value": "on"},
+				"volsize": {"parsed": 0, "value": ""},
+				"volblocksize": {"value": ""},
+				"sparse": {"value": ""},
+				"used": {"parsed": 1073741824, "value": "1G"},
+				"available": {"parsed": 5368709120, "value": "5G"}
+			}]`), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	ds, err := svc.GetDataset(context.Background(), "pool1/ds1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ds == nil {
+		t.Fatal("expected non-nil dataset")
+	}
+	if ds.Used != 1073741824 {
+		t.Errorf("expected Used 1073741824, got %d", ds.Used)
+	}
+	if ds.Available != 5368709120 {
+		t.Errorf("expected Available 5368709120, got %d", ds.Available)
+	}
+}
+
 func TestDatasetFromResponse(t *testing.T) {
 	resp := DatasetResponse{
 		ID:          "pool1/ds1",

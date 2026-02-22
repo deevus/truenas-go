@@ -17,6 +17,8 @@ type Dataset struct {
 	Quota       int64
 	RefQuota    int64
 	Atime       string
+	Used        int64
+	Available   int64
 }
 
 // CreateDatasetOpts contains options for creating a filesystem dataset.
@@ -75,9 +77,13 @@ type UpdateZvolOpts struct {
 
 // Pool is the user-facing representation of a TrueNAS pool.
 type Pool struct {
-	ID   int64
-	Name string
-	Path string
+	ID        int64
+	Name      string
+	Path      string
+	Status    string
+	Size      int64
+	Allocated int64
+	Free      int64
 }
 
 // Int64Ptr returns a pointer to an int64. Helper for setting optional fields.
@@ -272,6 +278,8 @@ func datasetFromResponse(resp DatasetResponse) Dataset {
 		Quota:       resp.Quota.Parsed,
 		RefQuota:    resp.RefQuota.Parsed,
 		Atime:       resp.Atime.Value,
+		Used:        resp.Used.Parsed,
+		Available:   resp.Available.Parsed,
 	}
 }
 
@@ -292,9 +300,13 @@ func zvolFromResponse(resp DatasetResponse) Zvol {
 // poolFromResponse converts a wire-format PoolResponse to a user-facing Pool.
 func poolFromResponse(resp PoolResponse) Pool {
 	return Pool{
-		ID:   resp.ID,
-		Name: resp.Name,
-		Path: resp.Path,
+		ID:        resp.ID,
+		Name:      resp.Name,
+		Path:      resp.Path,
+		Status:    resp.Status,
+		Size:      resp.Size,
+		Allocated: resp.Allocated,
+		Free:      resp.Free,
 	}
 }
 
