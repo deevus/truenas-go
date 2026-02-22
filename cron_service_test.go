@@ -7,25 +7,6 @@ import (
 	"testing"
 )
 
-// mockCaller is a test double for the Caller interface.
-type mockCaller struct {
-	callFunc func(ctx context.Context, method string, params any) (json.RawMessage, error)
-	calls    []mockCall
-}
-
-type mockCall struct {
-	Method string
-	Params any
-}
-
-func (m *mockCaller) Call(ctx context.Context, method string, params any) (json.RawMessage, error) {
-	m.calls = append(m.calls, mockCall{Method: method, Params: params})
-	if m.callFunc != nil {
-		return m.callFunc(ctx, method, params)
-	}
-	return nil, nil
-}
-
 // sampleCronJobJSON returns a JSON response for a cron job with inverted stdout/stderr.
 func sampleCronJobJSON() json.RawMessage {
 	return json.RawMessage(`[{
