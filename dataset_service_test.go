@@ -587,6 +587,9 @@ func TestDatasetService_CreateZvol(t *testing.T) {
 	if zvol.Comments != "test zvol" {
 		t.Errorf("expected Comments 'test zvol', got %s", zvol.Comments)
 	}
+	if zvol.Compression != "lz4" {
+		t.Errorf("expected Compression lz4, got %s", zvol.Compression)
+	}
 }
 
 func TestDatasetService_CreateZvol_MinimalOpts(t *testing.T) {
@@ -670,6 +673,9 @@ func TestDatasetService_GetZvol(t *testing.T) {
 	}
 	if !zvol.Sparse {
 		t.Error("expected Sparse=true")
+	}
+	if zvol.Compression != "lz4" {
+		t.Errorf("expected Compression lz4, got %s", zvol.Compression)
 	}
 }
 
@@ -940,6 +946,7 @@ func TestZvolFromResponse(t *testing.T) {
 		Pool:         "pool1",
 		Type:         "VOLUME",
 		Comments:     PropertyValue{Value: "my zvol"},
+		Compression:  PropertyValue{Value: "lz4"},
 		Volsize:      SizePropertyField{Parsed: 10737418240, Value: "10G"},
 		Volblocksize: PropertyValue{Value: "16K"},
 		Sparse:       PropertyValue{Value: "true"},
@@ -958,6 +965,9 @@ func TestZvolFromResponse(t *testing.T) {
 	}
 	if zvol.Comments != "my zvol" {
 		t.Errorf("expected Comments 'my zvol', got %s", zvol.Comments)
+	}
+	if zvol.Compression != "lz4" {
+		t.Errorf("expected Compression lz4, got %s", zvol.Compression)
 	}
 	if zvol.Volsize != 10737418240 {
 		t.Errorf("expected Volsize 10737418240, got %d", zvol.Volsize)
@@ -1077,21 +1087,29 @@ func TestDatasetCreateParams_Minimal(t *testing.T) {
 
 func TestDatasetUpdateParams(t *testing.T) {
 	opts := UpdateDatasetOpts{
-		Comments: StringPtr("updated"),
-		Quota:    Int64Ptr(2147483648),
-		RefQuota: Int64Ptr(1073741824),
+		Compression: "zstd",
+		Quota:       Int64Ptr(2147483648),
+		RefQuota:    Int64Ptr(1073741824),
+		Atime:       "off",
+		Comments:    StringPtr("updated"),
 	}
 
 	params := datasetUpdateParams(opts)
 
-	if params["comments"] != "updated" {
-		t.Errorf("expected comments updated, got %v", params["comments"])
+	if params["compression"] != "zstd" {
+		t.Errorf("expected compression zstd, got %v", params["compression"])
 	}
 	if params["quota"] != int64(2147483648) {
 		t.Errorf("expected quota 2147483648, got %v", params["quota"])
 	}
 	if params["refquota"] != int64(1073741824) {
 		t.Errorf("expected refquota 1073741824, got %v", params["refquota"])
+	}
+	if params["atime"] != "off" {
+		t.Errorf("expected atime off, got %v", params["atime"])
+	}
+	if params["comments"] != "updated" {
+		t.Errorf("expected comments updated, got %v", params["comments"])
 	}
 }
 
@@ -1105,12 +1123,42 @@ func TestDatasetUpdateParams_Empty(t *testing.T) {
 	}
 }
 
+func TestDatasetUpdateParams_CompressionAndAtime(t *testing.T) {
+	opts := UpdateDatasetOpts{
+		Compression: "gzip",
+		Atime:       "on",
+	}
+
+	params := datasetUpdateParams(opts)
+
+	if params["compression"] != "gzip" {
+		t.Errorf("expected compression gzip, got %v", params["compression"])
+	}
+	if params["atime"] != "on" {
+		t.Errorf("expected atime on, got %v", params["atime"])
+	}
+	if _, ok := params["comments"]; ok {
+		t.Error("expected no comments key when nil")
+	}
+	if _, ok := params["quota"]; ok {
+		t.Error("expected no quota key when nil")
+	}
+	if _, ok := params["refquota"]; ok {
+		t.Error("expected no refquota key when nil")
+	}
+	if len(params) != 2 {
+		t.Errorf("expected 2 params, got %d", len(params))
+	}
+}
+
 func TestZvolCreateParams(t *testing.T) {
 	opts := CreateZvolOpts{
 		Name:         "pool1/zvol1",
 		Volsize:      10737418240,
 		Volblocksize: "16K",
 		Sparse:       true,
+		ForceSize:    true,
+		Compression:  "lz4",
 		Comments:     "my zvol",
 	}
 
@@ -1130,6 +1178,12 @@ func TestZvolCreateParams(t *testing.T) {
 	}
 	if params["sparse"] != true {
 		t.Errorf("expected sparse true, got %v", params["sparse"])
+	}
+	if params["force_size"] != true {
+		t.Errorf("expected force_size true, got %v", params["force_size"])
+	}
+	if params["compression"] != "lz4" {
+		t.Errorf("expected compression lz4, got %v", params["compression"])
 	}
 	if params["comments"] != "my zvol" {
 		t.Errorf("expected comments 'my zvol', got %v", params["comments"])
@@ -1159,6 +1213,12 @@ func TestZvolCreateParams_Minimal(t *testing.T) {
 	if _, ok := params["sparse"]; ok {
 		t.Error("expected no sparse key")
 	}
+	if _, ok := params["force_size"]; ok {
+		t.Error("expected no force_size key")
+	}
+	if _, ok := params["compression"]; ok {
+		t.Error("expected no compression key")
+	}
 	if _, ok := params["comments"]; ok {
 		t.Error("expected no comments key")
 	}
@@ -1166,14 +1226,22 @@ func TestZvolCreateParams_Minimal(t *testing.T) {
 
 func TestZvolUpdateParams(t *testing.T) {
 	opts := UpdateZvolOpts{
-		Volsize:  Int64Ptr(21474836480),
-		Comments: StringPtr("resized"),
+		Volsize:     Int64Ptr(21474836480),
+		ForceSize:   true,
+		Compression: "zstd",
+		Comments:    StringPtr("resized"),
 	}
 
 	params := zvolUpdateParams(opts)
 
 	if params["volsize"] != int64(21474836480) {
 		t.Errorf("expected volsize 21474836480, got %v", params["volsize"])
+	}
+	if params["force_size"] != true {
+		t.Errorf("expected force_size true, got %v", params["force_size"])
+	}
+	if params["compression"] != "zstd" {
+		t.Errorf("expected compression zstd, got %v", params["compression"])
 	}
 	if params["comments"] != "resized" {
 		t.Errorf("expected comments resized, got %v", params["comments"])
@@ -1187,6 +1255,142 @@ func TestZvolUpdateParams_Empty(t *testing.T) {
 
 	if len(params) != 0 {
 		t.Errorf("expected empty params, got %v", params)
+	}
+}
+
+func TestZvolUpdateParams_ForceSizeOnly(t *testing.T) {
+	opts := UpdateZvolOpts{
+		ForceSize: true,
+	}
+
+	params := zvolUpdateParams(opts)
+
+	if params["force_size"] != true {
+		t.Errorf("expected force_size true, got %v", params["force_size"])
+	}
+	if len(params) != 1 {
+		t.Errorf("expected 1 param, got %d", len(params))
+	}
+}
+
+func TestDatasetService_UpdateDataset_CompressionAndAtime(t *testing.T) {
+	callCount := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callCount++
+			if callCount == 1 {
+				if method != "pool.dataset.update" {
+					t.Errorf("expected method pool.dataset.update, got %s", method)
+				}
+				slice := params.([]any)
+				p := slice[1].(map[string]any)
+				if p["compression"] != "zstd" {
+					t.Errorf("expected compression zstd, got %v", p["compression"])
+				}
+				if p["atime"] != "off" {
+					t.Errorf("expected atime off, got %v", p["atime"])
+				}
+				if _, ok := p["comments"]; ok {
+					t.Error("expected no comments key when nil")
+				}
+				return json.RawMessage(`{"id": "pool1/ds1"}`), nil
+			}
+			return sampleDatasetQueryJSON(), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	ds, err := svc.UpdateDataset(context.Background(), "pool1/ds1", UpdateDatasetOpts{
+		Compression: "zstd",
+		Atime:       "off",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ds == nil {
+		t.Fatal("expected non-nil dataset")
+	}
+	if ds.ID != "pool1/ds1" {
+		t.Errorf("expected ID pool1/ds1, got %s", ds.ID)
+	}
+}
+
+func TestDatasetService_CreateZvol_WithForceSize(t *testing.T) {
+	callCount := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callCount++
+			if callCount == 1 {
+				if method != "pool.dataset.create" {
+					t.Errorf("expected method pool.dataset.create, got %s", method)
+				}
+				p := params.(map[string]any)
+				if p["force_size"] != true {
+					t.Errorf("expected force_size true, got %v", p["force_size"])
+				}
+				if p["compression"] != "gzip" {
+					t.Errorf("expected compression gzip, got %v", p["compression"])
+				}
+				return json.RawMessage(`{"id": "pool1/zvol1", "name": "pool1/zvol1", "mountpoint": ""}`), nil
+			}
+			return sampleZvolQueryJSON(), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	zvol, err := svc.CreateZvol(context.Background(), CreateZvolOpts{
+		Name:        "pool1/zvol1",
+		Volsize:     10737418240,
+		ForceSize:   true,
+		Compression: "gzip",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if zvol == nil {
+		t.Fatal("expected non-nil zvol")
+	}
+	if zvol.Compression != "lz4" {
+		t.Errorf("expected Compression lz4 from re-read, got %s", zvol.Compression)
+	}
+}
+
+func TestDatasetService_UpdateZvol_WithCompression(t *testing.T) {
+	callCount := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callCount++
+			if callCount == 1 {
+				if method != "pool.dataset.update" {
+					t.Errorf("expected method pool.dataset.update, got %s", method)
+				}
+				slice := params.([]any)
+				p := slice[1].(map[string]any)
+				if p["compression"] != "zstd" {
+					t.Errorf("expected compression zstd, got %v", p["compression"])
+				}
+				if p["force_size"] != true {
+					t.Errorf("expected force_size true, got %v", p["force_size"])
+				}
+				return json.RawMessage(`{"id": "pool1/zvol1"}`), nil
+			}
+			return sampleZvolQueryJSON(), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	zvol, err := svc.UpdateZvol(context.Background(), "pool1/zvol1", UpdateZvolOpts{
+		Compression: "zstd",
+		ForceSize:   true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if zvol == nil {
+		t.Fatal("expected non-nil zvol")
+	}
+	if zvol.ID != "pool1/zvol1" {
+		t.Errorf("expected ID pool1/zvol1, got %s", zvol.ID)
 	}
 }
 

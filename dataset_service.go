@@ -31,10 +31,13 @@ type CreateDatasetOpts struct {
 
 // UpdateDatasetOpts contains options for updating a filesystem dataset.
 // Pointer fields distinguish "don't change" (nil) from "set to zero/empty".
+// String fields use empty string to mean "don't change".
 type UpdateDatasetOpts struct {
-	Comments *string
-	Quota    *int64
-	RefQuota *int64
+	Compression string  // Empty = don't change
+	Quota       *int64
+	RefQuota    *int64
+	Atime       string  // Empty = don't change
+	Comments    *string
 }
 
 // Zvol is the user-facing representation of a TrueNAS zvol.
@@ -43,6 +46,7 @@ type Zvol struct {
 	Name         string
 	Pool         string
 	Comments     string
+	Compression  string
 	Volsize      int64
 	Volblocksize string
 	Sparse       bool
@@ -54,14 +58,19 @@ type CreateZvolOpts struct {
 	Volsize      int64
 	Volblocksize string
 	Sparse       bool
+	ForceSize    bool
+	Compression  string
 	Comments     string
 }
 
 // UpdateZvolOpts contains options for updating a zvol.
 // Pointer fields distinguish "don't change" (nil) from "set to zero/empty".
+// String fields use empty string to mean "don't change".
 type UpdateZvolOpts struct {
-	Volsize  *int64
-	Comments *string
+	Volsize     *int64
+	ForceSize   bool   // Only sent when true
+	Compression string // Empty = don't change
+	Comments    *string
 }
 
 // Pool is the user-facing representation of a TrueNAS pool.
@@ -273,6 +282,7 @@ func zvolFromResponse(resp DatasetResponse) Zvol {
 		Name:         resp.Name,
 		Pool:         resp.Pool,
 		Comments:     resp.Comments.Value,
+		Compression:  resp.Compression.Value,
 		Volsize:      resp.Volsize.Parsed,
 		Volblocksize: resp.Volblocksize.Value,
 		Sparse:       resp.Sparse.Value == "true",
@@ -315,14 +325,20 @@ func datasetCreateParams(opts CreateDatasetOpts) map[string]any {
 // datasetUpdateParams builds API parameters for pool.dataset.update (filesystem).
 func datasetUpdateParams(opts UpdateDatasetOpts) map[string]any {
 	params := map[string]any{}
-	if opts.Comments != nil {
-		params["comments"] = *opts.Comments
+	if opts.Compression != "" {
+		params["compression"] = opts.Compression
 	}
 	if opts.Quota != nil {
 		params["quota"] = *opts.Quota
 	}
 	if opts.RefQuota != nil {
 		params["refquota"] = *opts.RefQuota
+	}
+	if opts.Atime != "" {
+		params["atime"] = opts.Atime
+	}
+	if opts.Comments != nil {
+		params["comments"] = *opts.Comments
 	}
 	return params
 }
@@ -340,6 +356,12 @@ func zvolCreateParams(opts CreateZvolOpts) map[string]any {
 	if opts.Sparse {
 		params["sparse"] = true
 	}
+	if opts.ForceSize {
+		params["force_size"] = true
+	}
+	if opts.Compression != "" {
+		params["compression"] = opts.Compression
+	}
 	if opts.Comments != "" {
 		params["comments"] = opts.Comments
 	}
@@ -351,6 +373,12 @@ func zvolUpdateParams(opts UpdateZvolOpts) map[string]any {
 	params := map[string]any{}
 	if opts.Volsize != nil {
 		params["volsize"] = *opts.Volsize
+	}
+	if opts.ForceSize {
+		params["force_size"] = true
+	}
+	if opts.Compression != "" {
+		params["compression"] = opts.Compression
 	}
 	if opts.Comments != nil {
 		params["comments"] = *opts.Comments
