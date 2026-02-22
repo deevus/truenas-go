@@ -261,14 +261,14 @@ func TestRateLimitedClient_DelegatingMethods(t *testing.T) {
 	t.Run("WriteFile", func(t *testing.T) {
 		called := false
 		mock := &MockClient{
-			WriteFileFunc: func(ctx context.Context, path string, params WriteFileParams) error {
+			WriteFileFunc: func(ctx context.Context, path string, params truenas.WriteFileParams) error {
 				called = true
 				return nil
 			},
 		}
 		client := NewRateLimitedClient(mock, 60, 3, nil)
 
-		err := client.WriteFile(ctx, "/test", DefaultWriteFileParams([]byte("content")))
+		err := client.WriteFile(ctx, "/test", truenas.DefaultWriteFileParams([]byte("content")))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

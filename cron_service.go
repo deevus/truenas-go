@@ -44,20 +44,15 @@ type CreateCronJobOpts struct {
 // All fields are always sent on update.
 type UpdateCronJobOpts = CreateCronJobOpts
 
-// Caller is the interface used by services to make API calls.
-// It is satisfied by client.Client and client.MockClient.
-type Caller interface {
-	Call(ctx context.Context, method string, params any) (json.RawMessage, error)
-}
-
 // CronService provides typed methods for the cronjob.* API namespace.
 type CronService struct {
-	client Caller
+	client  Caller
+	version Version
 }
 
 // NewCronService creates a new CronService.
-func NewCronService(c Caller) *CronService {
-	return &CronService{client: c}
+func NewCronService(c Caller, v Version) *CronService {
+	return &CronService{client: c, version: v}
 }
 
 // Create creates a cron job and returns the full object.

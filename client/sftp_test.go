@@ -88,11 +88,11 @@ func TestSSHClient_WriteFile_Success(t *testing.T) {
 		},
 	}
 
-	params := WriteFileParams{
+	params := truenas.WriteFileParams{
 		Content: []byte("hello world"),
 		Mode:    0644,
-		UID:     IntPtr(1000),
-		GID:     IntPtr(1000),
+		UID:     truenas.IntPtr(1000),
+		GID:     truenas.IntPtr(1000),
 	}
 	err := client.WriteFile(context.Background(), "/mnt/storage/test.txt", params)
 	if err != nil {
@@ -136,7 +136,7 @@ func TestSSHClient_WriteFile_Error(t *testing.T) {
 		},
 	}
 
-	params := DefaultWriteFileParams([]byte("hello"))
+	params := truenas.DefaultWriteFileParams([]byte("hello"))
 	err := client.WriteFile(context.Background(), "/mnt/storage/test.txt", params)
 	if err == nil {
 		t.Fatal("expected error for API failure")

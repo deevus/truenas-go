@@ -8,27 +8,6 @@ import (
 	truenas "github.com/deevus/truenas-go"
 )
 
-// WriteFileParams contains parameters for writing a file.
-type WriteFileParams struct {
-	Content []byte      // Required - file data to write
-	Mode    fs.FileMode // Default: 0644
-	UID     *int        // nil = unchanged, pointer allows explicit 0 (root)
-	GID     *int        // nil = unchanged, pointer allows explicit 0 (root)
-}
-
-// DefaultWriteFileParams returns params with sensible defaults.
-// Mode defaults to 0644. UID/GID are nil (unchanged).
-func DefaultWriteFileParams(content []byte) WriteFileParams {
-	return WriteFileParams{
-		Content: content,
-		Mode:    0644,
-		// UID and GID default to nil (zero value for *int)
-	}
-}
-
-// IntPtr returns a pointer to an int. Helper for setting UID/GID.
-func IntPtr(i int) *int { return &i }
-
 // Client defines the interface for communicating with TrueNAS.
 type Client interface {
 	// Connect establishes connection and detects TrueNAS version.
@@ -46,7 +25,7 @@ type Client interface {
 	CallAndWait(ctx context.Context, method string, params any) (json.RawMessage, error)
 
 	// WriteFile writes content to a file on the remote system.
-	WriteFile(ctx context.Context, path string, params WriteFileParams) error
+	WriteFile(ctx context.Context, path string, params truenas.WriteFileParams) error
 
 	// ReadFile reads the content of a file from the remote system.
 	ReadFile(ctx context.Context, path string) ([]byte, error)
@@ -82,7 +61,7 @@ type MockClient struct {
 	VersionVal         truenas.Version
 	CallFunc           func(ctx context.Context, method string, params any) (json.RawMessage, error)
 	CallAndWaitFunc    func(ctx context.Context, method string, params any) (json.RawMessage, error)
-	WriteFileFunc      func(ctx context.Context, path string, params WriteFileParams) error
+	WriteFileFunc      func(ctx context.Context, path string, params truenas.WriteFileParams) error
 	ReadFileFunc       func(ctx context.Context, path string) ([]byte, error)
 	DeleteFileFunc     func(ctx context.Context, path string) error
 	RemoveDirFunc      func(ctx context.Context, path string) error
@@ -119,7 +98,7 @@ func (m *MockClient) CallAndWait(ctx context.Context, method string, params any)
 	return nil, nil
 }
 
-func (m *MockClient) WriteFile(ctx context.Context, path string, params WriteFileParams) error {
+func (m *MockClient) WriteFile(ctx context.Context, path string, params truenas.WriteFileParams) error {
 	if m.WriteFileFunc != nil {
 		return m.WriteFileFunc(ctx, path, params)
 	}

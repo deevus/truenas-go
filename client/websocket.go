@@ -827,7 +827,7 @@ func (c *WebSocketClient) Version() truenas.Version {
 }
 
 // WriteFile writes content to a file using filesystem.file_receive.
-func (c *WebSocketClient) WriteFile(ctx context.Context, path string, params WriteFileParams) error {
+func (c *WebSocketClient) WriteFile(ctx context.Context, path string, params truenas.WriteFileParams) error {
 	b64Content := base64.StdEncoding.EncodeToString(params.Content)
 
 	uid := -1

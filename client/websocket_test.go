@@ -1416,13 +1416,13 @@ func TestWebSocketClient_WriteFile(t *testing.T) {
 	tests := []struct {
 		name    string
 		path    string
-		params  WriteFileParams
+		params  truenas.WriteFileParams
 		wantErr bool
 	}{
 		{
 			name: "success_with_uid_gid",
 			path: "/mnt/test/file.txt",
-			params: WriteFileParams{
+			params: truenas.WriteFileParams{
 				Content: []byte("hello world"),
 				Mode:    0644,
 				UID:     intPtr(1000),
@@ -1433,7 +1433,7 @@ func TestWebSocketClient_WriteFile(t *testing.T) {
 		{
 			name: "success_without_uid_gid",
 			path: "/mnt/test/file.txt",
-			params: WriteFileParams{
+			params: truenas.WriteFileParams{
 				Content: []byte("hello world"),
 				Mode:    0644,
 			},
@@ -1622,7 +1622,7 @@ func TestWebSocketClient_WriteFile_Error(t *testing.T) {
 	if err := client.Connect(ctx); err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
-	err = client.WriteFile(ctx, "/mnt/test/file.txt", WriteFileParams{Content: []byte("test"), Mode: 0644})
+	err = client.WriteFile(ctx, "/mnt/test/file.txt", truenas.WriteFileParams{Content: []byte("test"), Mode: 0644})
 
 	if err == nil {
 		t.Error("WriteFile() expected error, got nil")

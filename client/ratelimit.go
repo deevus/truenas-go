@@ -138,7 +138,7 @@ func (r *RateLimitedClient) CallAndWait(ctx context.Context, method string, para
 }
 
 // WriteFile delegates to the underlying client with rate limiting.
-func (r *RateLimitedClient) WriteFile(ctx context.Context, path string, params WriteFileParams) error {
+func (r *RateLimitedClient) WriteFile(ctx context.Context, path string, params truenas.WriteFileParams) error {
 	if err := r.limiter.Wait(ctx); err != nil {
 		return fmt.Errorf("rate limiter: %w", err)
 	}

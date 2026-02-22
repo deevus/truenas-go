@@ -71,7 +71,7 @@ func TestCronService_Create(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	job, err := svc.Create(context.Background(), CreateCronJobOpts{
 		User:          "root",
 		Command:       "/usr/local/bin/backup.sh",
@@ -122,7 +122,7 @@ func TestCronService_Create_Error(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	job, err := svc.Create(context.Background(), CreateCronJobOpts{})
 	if err == nil {
 		t.Fatal("expected error")
@@ -142,7 +142,7 @@ func TestCronService_Create_ParseError(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	_, err := svc.Create(context.Background(), CreateCronJobOpts{})
 	if err == nil {
 		t.Fatal("expected parse error")
@@ -159,7 +159,7 @@ func TestCronService_Get(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	job, err := svc.Get(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -185,7 +185,7 @@ func TestCronService_Get_NotFound(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	job, err := svc.Get(context.Background(), 999)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -202,7 +202,7 @@ func TestCronService_Get_Error(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	_, err := svc.Get(context.Background(), 1)
 	if err == nil {
 		t.Fatal("expected error")
@@ -225,7 +225,7 @@ func TestCronService_List(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	jobs, err := svc.List(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -251,7 +251,7 @@ func TestCronService_List_Empty(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	jobs, err := svc.List(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -268,7 +268,7 @@ func TestCronService_List_Error(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	_, err := svc.List(context.Background())
 	if err == nil {
 		t.Fatal("expected error")
@@ -303,7 +303,7 @@ func TestCronService_Update(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	job, err := svc.Update(context.Background(), 1, UpdateCronJobOpts{
 		User:    "root",
 		Command: "/usr/local/bin/backup.sh",
@@ -333,7 +333,7 @@ func TestCronService_Update_Error(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	_, err := svc.Update(context.Background(), 999, UpdateCronJobOpts{})
 	if err == nil {
 		t.Fatal("expected error")
@@ -354,7 +354,7 @@ func TestCronService_Delete(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	err := svc.Delete(context.Background(), 5)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -368,7 +368,7 @@ func TestCronService_Delete_Error(t *testing.T) {
 		},
 	}
 
-	svc := NewCronService(mock)
+	svc := NewCronService(mock, Version{})
 	err := svc.Delete(context.Background(), 1)
 	if err == nil {
 		t.Fatal("expected error")
