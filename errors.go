@@ -9,5 +9,8 @@ func isNotFoundError(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "does not exist") || strings.Contains(msg, "[ENOENT]")
+	return strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "[ENOENT]") ||
+		strings.Contains(msg, "not found") ||
+		strings.Contains(msg, "no such instance")
 }
