@@ -1047,14 +1047,13 @@ func TestVMService_CreateDevice_Display(t *testing.T) {
 		},
 	}
 
-	port := int64(5900)
 	svc := NewVMService(mock, Version{})
 	device, err := svc.CreateDevice(context.Background(), CreateVMDeviceOpts{
 		VM:         1,
 		DeviceType: DeviceTypeDisplay,
 		Display: &DisplayDevice{
 			Type:       "SPICE",
-			Port:       &port,
+			Port:       5900,
 			Bind:       "0.0.0.0",
 			Password:   "secret",
 			Web:        true,
@@ -1094,7 +1093,7 @@ func TestVMService_CreateDevice_PCI(t *testing.T) {
 		VM:         1,
 		DeviceType: DeviceTypePCI,
 		PCI: &PCIDevice{
-			Pptdev: "pci_0000_01_00_0",
+			PPTDev: "pci_0000_01_00_0",
 		},
 	})
 	if err != nil {
@@ -1106,8 +1105,8 @@ func TestVMService_CreateDevice_PCI(t *testing.T) {
 	if device.PCI == nil {
 		t.Fatal("expected non-nil PCI")
 	}
-	if device.PCI.Pptdev != "pci_0000_01_00_0" {
-		t.Errorf("expected pptdev, got %s", device.PCI.Pptdev)
+	if device.PCI.PPTDev != "pci_0000_01_00_0" {
+		t.Errorf("expected pptdev, got %s", device.PCI.PPTDev)
 	}
 }
 
@@ -1125,14 +1124,13 @@ func TestVMService_CreateDevice_USB(t *testing.T) {
 		},
 	}
 
-	deviceName := "usb_0_1_2"
 	svc := NewVMService(mock, Version{})
 	device, err := svc.CreateDevice(context.Background(), CreateVMDeviceOpts{
 		VM:         1,
 		DeviceType: DeviceTypeUSB,
 		USB: &USBDevice{
 			ControllerType: "nec-xhci",
-			Device:         &deviceName,
+			Device:         "usb_0_1_2",
 			USBSpeed:       "HIGH",
 		},
 	})
@@ -1148,7 +1146,7 @@ func TestVMService_CreateDevice_USB(t *testing.T) {
 	if device.USB.ControllerType != "nec-xhci" {
 		t.Errorf("expected controller_type nec-xhci, got %s", device.USB.ControllerType)
 	}
-	if device.USB.Device == nil || *device.USB.Device != "usb_0_1_2" {
+	if device.USB.Device != "usb_0_1_2" {
 		t.Errorf("expected device usb_0_1_2, got %v", device.USB.Device)
 	}
 }
@@ -1361,7 +1359,7 @@ func TestVMService_DeleteDevice_Error(t *testing.T) {
 
 // --- Conversion Tests ---
 
-func TestVmFromResponse(t *testing.T) {
+func TestVMFromResponse(t *testing.T) {
 	minMem := int64(2048)
 	cpuModel := "Haswell"
 	pid := int64(12345)
@@ -1412,7 +1410,7 @@ func TestVmFromResponse(t *testing.T) {
 	}
 }
 
-func TestVmFromResponse_NullCPUModel(t *testing.T) {
+func TestVMFromResponse_NullCPUModel(t *testing.T) {
 	resp := VMResponse{
 		ID:       1,
 		Name:     "test",
@@ -1426,7 +1424,7 @@ func TestVmFromResponse_NullCPUModel(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_Disk(t *testing.T) {
+func TestVMDeviceFromResponse_Disk(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    10,
 		VM:    1,
@@ -1458,7 +1456,7 @@ func TestVmDeviceFromResponse_Disk(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_Raw(t *testing.T) {
+func TestVMDeviceFromResponse_Raw(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    11,
 		VM:    1,
@@ -1487,7 +1485,7 @@ func TestVmDeviceFromResponse_Raw(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_CDROM(t *testing.T) {
+func TestVMDeviceFromResponse_CDROM(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    12,
 		VM:    1,
@@ -1510,7 +1508,7 @@ func TestVmDeviceFromResponse_CDROM(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_NIC(t *testing.T) {
+func TestVMDeviceFromResponse_NIC(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    13,
 		VM:    1,
@@ -1534,12 +1532,12 @@ func TestVmDeviceFromResponse_NIC(t *testing.T) {
 	if device.NIC.NICAttach != "br0" {
 		t.Errorf("expected nic_attach br0, got %s", device.NIC.NICAttach)
 	}
-	if device.NIC.TrustGuestRXFilters {
+	if device.NIC.TrustGuestRxFilters {
 		t.Error("expected trust_guest_rx_filters=false")
 	}
 }
 
-func TestVmDeviceFromResponse_Display(t *testing.T) {
+func TestVMDeviceFromResponse_Display(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    14,
 		VM:    1,
@@ -1563,7 +1561,7 @@ func TestVmDeviceFromResponse_Display(t *testing.T) {
 	if device.Display == nil {
 		t.Fatal("expected non-nil Display")
 	}
-	if device.Display.Port == nil || *device.Display.Port != 5900 {
+	if device.Display.Port != 5900 {
 		t.Errorf("expected port 5900, got %v", device.Display.Port)
 	}
 	if !device.Display.Web {
@@ -1574,7 +1572,7 @@ func TestVmDeviceFromResponse_Display(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_PCI(t *testing.T) {
+func TestVMDeviceFromResponse_PCI(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    15,
 		VM:    1,
@@ -1592,12 +1590,12 @@ func TestVmDeviceFromResponse_PCI(t *testing.T) {
 	if device.PCI == nil {
 		t.Fatal("expected non-nil PCI")
 	}
-	if device.PCI.Pptdev != "pci_0000_01_00_0" {
-		t.Errorf("expected pptdev, got %s", device.PCI.Pptdev)
+	if device.PCI.PPTDev != "pci_0000_01_00_0" {
+		t.Errorf("expected pptdev, got %s", device.PCI.PPTDev)
 	}
 }
 
-func TestVmDeviceFromResponse_USB(t *testing.T) {
+func TestVMDeviceFromResponse_USB(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    16,
 		VM:    1,
@@ -1620,7 +1618,7 @@ func TestVmDeviceFromResponse_USB(t *testing.T) {
 	if device.USB.ControllerType != "nec-xhci" {
 		t.Errorf("expected controller_type nec-xhci, got %s", device.USB.ControllerType)
 	}
-	if device.USB.Device == nil || *device.USB.Device != "usb_0_1_2" {
+	if device.USB.Device != "usb_0_1_2" {
 		t.Errorf("expected device usb_0_1_2, got %v", device.USB.Device)
 	}
 	if device.USB.USBSpeed != "HIGH" {
@@ -1628,7 +1626,7 @@ func TestVmDeviceFromResponse_USB(t *testing.T) {
 	}
 }
 
-func TestVmDeviceFromResponse_USB_NilDevice(t *testing.T) {
+func TestVMDeviceFromResponse_USB_EmptyDevice(t *testing.T) {
 	resp := VMDeviceResponse{
 		ID:    17,
 		VM:    1,
@@ -1645,9 +1643,9 @@ func TestVmDeviceFromResponse_USB_NilDevice(t *testing.T) {
 	if device.USB == nil {
 		t.Fatal("expected non-nil USB")
 	}
-	// Empty string device should become nil pointer
-	if device.USB.Device != nil {
-		t.Errorf("expected nil Device for empty string, got %v", device.USB.Device)
+	// Empty string device should remain empty string
+	if device.USB.Device != "" {
+		t.Errorf("expected empty Device for empty string, got %v", device.USB.Device)
 	}
 }
 
@@ -1764,7 +1762,7 @@ func TestIntPtrFromMap(t *testing.T) {
 
 // --- Param Builder Tests ---
 
-func TestVmOptsToParams(t *testing.T) {
+func TestVMOptsToParams(t *testing.T) {
 	opts := CreateVMOpts{
 		Name:            "test-vm",
 		Description:     "A test VM",
@@ -1798,7 +1796,7 @@ func TestVmOptsToParams(t *testing.T) {
 	}
 }
 
-func TestVmOptsToParams_WithMinMemory(t *testing.T) {
+func TestVMOptsToParams_WithMinMemory(t *testing.T) {
 	minMem := int64(1024)
 	opts := CreateVMOpts{
 		MinMemory: &minMem,
@@ -1811,7 +1809,7 @@ func TestVmOptsToParams_WithMinMemory(t *testing.T) {
 	}
 }
 
-func TestVmOptsToParams_WithCPUModel(t *testing.T) {
+func TestVMOptsToParams_WithCPUModel(t *testing.T) {
 	opts := CreateVMOpts{
 		CPUModel: "Haswell",
 	}

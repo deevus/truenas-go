@@ -73,6 +73,8 @@ type StopVMOpts struct {
 type DiskDevice struct {
 	Path         string
 	Type         string
+	IOType       string
+	Serial       string
 	PhysicalSectorSize *int64
 	Logical_Sector_Size *int64
 }
@@ -82,6 +84,9 @@ type RawDevice struct {
 	Path         string
 	Type         string
 	Boot         bool
+	IOType       string
+	Serial       string
+	Exists       bool
 	Size         *int64
 	PhysicalSectorSize *int64
 	Logical_Sector_Size *int64
@@ -97,13 +102,14 @@ type NICDevice struct {
 	Type    string
 	NICAttach string
 	MAC     string
-	TrustGuestRXFilters bool
+	TrustGuestRxFilters bool
 }
 
 // DisplayDevice contains attributes for a DISPLAY device.
 type DisplayDevice struct {
 	Type       string
-	Port       *int64
+	Port       int64
+	WebPort    int64
 	Bind       string
 	Password   string
 	Web        bool
@@ -113,13 +119,13 @@ type DisplayDevice struct {
 
 // PCIDevice contains attributes for a PCI device.
 type PCIDevice struct {
-	Pptdev string
+	PPTDev string
 }
 
 // USBDevice contains attributes for a USB device.
 type USBDevice struct {
 	ControllerType string
-	Device         *string
+	Device         string
 	USBSpeed       string
 }
 
@@ -353,6 +359,8 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 		if opts.Disk != nil {
 			setNonEmpty(attrs, "path", opts.Disk.Path)
 			setNonEmpty(attrs, "type", opts.Disk.Type)
+			setNonEmpty(attrs, "io_type", opts.Disk.IOType)
+			setNonEmpty(attrs, "serial", opts.Disk.Serial)
 			setNonNilInt(attrs, "physical_sectorsize", opts.Disk.PhysicalSectorSize)
 			setNonNilInt(attrs, "logical_sectorsize", opts.Disk.Logical_Sector_Size)
 		}
@@ -361,6 +369,9 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 			setNonEmpty(attrs, "path", opts.Raw.Path)
 			setNonEmpty(attrs, "type", opts.Raw.Type)
 			attrs["boot"] = opts.Raw.Boot
+			setNonEmpty(attrs, "io_type", opts.Raw.IOType)
+			setNonEmpty(attrs, "serial", opts.Raw.Serial)
+			attrs["exists"] = opts.Raw.Exists
 			setNonNilInt(attrs, "size", opts.Raw.Size)
 			setNonNilInt(attrs, "physical_sectorsize", opts.Raw.PhysicalSectorSize)
 			setNonNilInt(attrs, "logical_sectorsize", opts.Raw.Logical_Sector_Size)
@@ -374,12 +385,13 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 			setNonEmpty(attrs, "type", opts.NIC.Type)
 			setNonEmpty(attrs, "nic_attach", opts.NIC.NICAttach)
 			setNonEmpty(attrs, "mac", opts.NIC.MAC)
-			attrs["trust_guest_rx_filters"] = opts.NIC.TrustGuestRXFilters
+			attrs["trust_guest_rx_filters"] = opts.NIC.TrustGuestRxFilters
 		}
 	case DeviceTypeDisplay:
 		if opts.Display != nil {
 			setNonEmpty(attrs, "type", opts.Display.Type)
-			setNonNilInt(attrs, "port", opts.Display.Port)
+			attrs["port"] = opts.Display.Port
+			attrs["web_port"] = opts.Display.WebPort
 			setNonEmpty(attrs, "bind", opts.Display.Bind)
 			setNonEmpty(attrs, "password", opts.Display.Password)
 			attrs["web"] = opts.Display.Web
@@ -388,14 +400,12 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 		}
 	case DeviceTypePCI:
 		if opts.PCI != nil {
-			setNonEmpty(attrs, "pptdev", opts.PCI.Pptdev)
+			setNonEmpty(attrs, "pptdev", opts.PCI.PPTDev)
 		}
 	case DeviceTypeUSB:
 		if opts.USB != nil {
 			setNonEmpty(attrs, "controller_type", opts.USB.ControllerType)
-			if opts.USB.Device != nil {
-				attrs["device"] = *opts.USB.Device
-			}
+			setNonEmpty(attrs, "device", opts.USB.Device)
 			setNonEmpty(attrs, "usb_speed", opts.USB.USBSpeed)
 		}
 	}
@@ -470,6 +480,8 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 		device.Disk = &DiskDevice{
 			Path:                stringFromMap(resp.Attributes, "path"),
 			Type:                stringFromMap(resp.Attributes, "type"),
+			IOType:              stringFromMap(resp.Attributes, "io_type"),
+			Serial:              stringFromMap(resp.Attributes, "serial"),
 			PhysicalSectorSize:  intPtrFromMap(resp.Attributes, "physical_sectorsize"),
 			Logical_Sector_Size: intPtrFromMap(resp.Attributes, "logical_sectorsize"),
 		}
@@ -478,6 +490,9 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 			Path:                stringFromMap(resp.Attributes, "path"),
 			Type:                stringFromMap(resp.Attributes, "type"),
 			Boot:                boolFromMap(resp.Attributes, "boot"),
+			IOType:              stringFromMap(resp.Attributes, "io_type"),
+			Serial:              stringFromMap(resp.Attributes, "serial"),
+			Exists:              boolFromMap(resp.Attributes, "exists"),
 			Size:                intPtrFromMap(resp.Attributes, "size"),
 			PhysicalSectorSize:  intPtrFromMap(resp.Attributes, "physical_sectorsize"),
 			Logical_Sector_Size: intPtrFromMap(resp.Attributes, "logical_sectorsize"),
@@ -491,12 +506,13 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 			Type:                stringFromMap(resp.Attributes, "type"),
 			NICAttach:           stringFromMap(resp.Attributes, "nic_attach"),
 			MAC:                 stringFromMap(resp.Attributes, "mac"),
-			TrustGuestRXFilters: boolFromMap(resp.Attributes, "trust_guest_rx_filters"),
+			TrustGuestRxFilters: boolFromMap(resp.Attributes, "trust_guest_rx_filters"),
 		}
 	case DeviceTypeDisplay:
 		device.Display = &DisplayDevice{
 			Type:       stringFromMap(resp.Attributes, "type"),
-			Port:       intPtrFromMap(resp.Attributes, "port"),
+			Port:       intFromMap(resp.Attributes, "port"),
+			WebPort:    intFromMap(resp.Attributes, "web_port"),
 			Bind:       stringFromMap(resp.Attributes, "bind"),
 			Password:   stringFromMap(resp.Attributes, "password"),
 			Web:        boolFromMap(resp.Attributes, "web"),
@@ -505,16 +521,12 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 		}
 	case DeviceTypePCI:
 		device.PCI = &PCIDevice{
-			Pptdev: stringFromMap(resp.Attributes, "pptdev"),
+			PPTDev: stringFromMap(resp.Attributes, "pptdev"),
 		}
 	case DeviceTypeUSB:
-		var devicePtr *string
-		if v := stringFromMap(resp.Attributes, "device"); v != "" {
-			devicePtr = &v
-		}
 		device.USB = &USBDevice{
 			ControllerType: stringFromMap(resp.Attributes, "controller_type"),
-			Device:         devicePtr,
+			Device:         stringFromMap(resp.Attributes, "device"),
 			USBSpeed:       stringFromMap(resp.Attributes, "usb_speed"),
 		}
 	}
