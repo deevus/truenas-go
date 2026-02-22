@@ -894,6 +894,45 @@ func TestDatasetService_ListPools_Error(t *testing.T) {
 	}
 }
 
+func TestDatasetService_ListPools_AllFields(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return json.RawMessage(`[{
+				"id": 1,
+				"name": "tank",
+				"path": "/mnt/tank",
+				"status": "ONLINE",
+				"size": 1099511627776,
+				"allocated": 549755813888,
+				"free": 549755813888
+			}]`), nil
+		},
+	}
+
+	svc := NewDatasetService(mock, Version{})
+	pools, err := svc.ListPools(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pools) != 1 {
+		t.Fatalf("expected 1 pool, got %d", len(pools))
+	}
+
+	pool := pools[0]
+	if pool.Status != "ONLINE" {
+		t.Errorf("expected Status ONLINE, got %s", pool.Status)
+	}
+	if pool.Size != 1099511627776 {
+		t.Errorf("expected Size 1099511627776, got %d", pool.Size)
+	}
+	if pool.Allocated != 549755813888 {
+		t.Errorf("expected Allocated 549755813888, got %d", pool.Allocated)
+	}
+	if pool.Free != 549755813888 {
+		t.Errorf("expected Free 549755813888, got %d", pool.Free)
+	}
+}
+
 func TestDatasetFromResponse(t *testing.T) {
 	resp := DatasetResponse{
 		ID:          "pool1/ds1",

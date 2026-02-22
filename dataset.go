@@ -32,7 +32,11 @@ type DatasetCreateResponse struct {
 
 // PoolResponse represents a pool from the pool.query API.
 type PoolResponse struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Path string `json:"path"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+	Status    string `json:"status"`
+	Size      int64  `json:"size"`
+	Allocated int64  `json:"allocated"`
+	Free      int64  `json:"free"`
 }
