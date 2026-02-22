@@ -1,25 +1,5 @@
 package truenas
 
-// Snapshot method names (without prefix).
-const (
-	MethodSnapshotCreate  = "create"
-	MethodSnapshotQuery   = "query"
-	MethodSnapshotDelete  = "delete"
-	MethodSnapshotHold    = "hold"
-	MethodSnapshotRelease = "release"
-	MethodSnapshotClone   = "clone"
-)
-
-// ResolveSnapshotMethod returns the full API method name for the given version.
-// Pre-25.10 uses "zfs.snapshot.*", 25.10+ uses "pool.snapshot.*".
-func ResolveSnapshotMethod(v Version, method string) string {
-	prefix := "zfs.snapshot"
-	if v.AtLeast(25, 10) {
-		prefix = "pool.snapshot"
-	}
-	return prefix + "." + method
-}
-
 // SnapshotResponse represents a snapshot from the query API.
 type SnapshotResponse struct {
 	ID           string             `json:"id"`
