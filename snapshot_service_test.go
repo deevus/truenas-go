@@ -7,6 +7,66 @@ import (
 	"testing"
 )
 
+func TestResolveSnapshotMethod(t *testing.T) {
+	tests := []struct {
+		name    string
+		version Version
+		method  string
+		want    string
+	}{
+		{
+			name:    "24.10 uses zfs.snapshot",
+			version: Version{Major: 24, Minor: 10},
+			method:  methodSnapshotCreate,
+			want:    "zfs.snapshot.create",
+		},
+		{
+			name:    "25.04 uses zfs.snapshot",
+			version: Version{Major: 25, Minor: 4},
+			method:  methodSnapshotQuery,
+			want:    "zfs.snapshot.query",
+		},
+		{
+			name:    "25.10 uses pool.snapshot",
+			version: Version{Major: 25, Minor: 10},
+			method:  methodSnapshotCreate,
+			want:    "pool.snapshot.create",
+		},
+		{
+			name:    "26.0 uses pool.snapshot",
+			version: Version{Major: 26, Minor: 0},
+			method:  methodSnapshotDelete,
+			want:    "pool.snapshot.delete",
+		},
+		{
+			name:    "hold method",
+			version: Version{Major: 24, Minor: 10},
+			method:  methodSnapshotHold,
+			want:    "zfs.snapshot.hold",
+		},
+		{
+			name:    "release method",
+			version: Version{Major: 25, Minor: 10},
+			method:  methodSnapshotRelease,
+			want:    "pool.snapshot.release",
+		},
+		{
+			name:    "clone method",
+			version: Version{Major: 24, Minor: 10},
+			method:  methodSnapshotClone,
+			want:    "zfs.snapshot.clone",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resolveSnapshotMethod(tt.version, tt.method); got != tt.want {
+				t.Errorf("resolveSnapshotMethod() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // sampleSnapshotJSON returns a JSON response for a single snapshot with no hold.
 func sampleSnapshotJSON() json.RawMessage {
 	return json.RawMessage(`[{

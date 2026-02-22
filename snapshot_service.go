@@ -6,6 +6,26 @@ import (
 	"fmt"
 )
 
+// Snapshot method names (without prefix).
+const (
+	methodSnapshotCreate  = "create"
+	methodSnapshotQuery   = "query"
+	methodSnapshotDelete  = "delete"
+	methodSnapshotHold    = "hold"
+	methodSnapshotRelease = "release"
+	methodSnapshotClone   = "clone"
+)
+
+// resolveSnapshotMethod returns the full API method name for the given version.
+// Pre-25.10 uses "zfs.snapshot.*", 25.10+ uses "pool.snapshot.*".
+func resolveSnapshotMethod(v Version, method string) string {
+	prefix := "zfs.snapshot"
+	if v.AtLeast(25, 10) {
+		prefix = "pool.snapshot"
+	}
+	return prefix + "." + method
+}
+
 // Snapshot is the user-facing representation of a TrueNAS ZFS snapshot.
 type Snapshot struct {
 	ID           string
@@ -45,7 +65,7 @@ func (s *SnapshotService) Create(ctx context.Context, opts CreateSnapshotOpts) (
 		params["recursive"] = true
 	}
 
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotCreate)
+	method := resolveSnapshotMethod(s.version, methodSnapshotCreate)
 	_, err := s.client.Call(ctx, method, params)
 	if err != nil {
 		return nil, err
@@ -58,7 +78,7 @@ func (s *SnapshotService) Create(ctx context.Context, opts CreateSnapshotOpts) (
 // Get returns a snapshot by ID, or nil if not found.
 func (s *SnapshotService) Get(ctx context.Context, id string) (*Snapshot, error) {
 	filter := [][]any{{"id", "=", id}}
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotQuery)
+	method := resolveSnapshotMethod(s.version, methodSnapshotQuery)
 	result, err := s.client.Call(ctx, method, filter)
 	if err != nil {
 		return nil, err
@@ -79,7 +99,7 @@ func (s *SnapshotService) Get(ctx context.Context, id string) (*Snapshot, error)
 
 // List returns all snapshots.
 func (s *SnapshotService) List(ctx context.Context) ([]Snapshot, error) {
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotQuery)
+	method := resolveSnapshotMethod(s.version, methodSnapshotQuery)
 	result, err := s.client.Call(ctx, method, nil)
 	if err != nil {
 		return nil, err
@@ -99,21 +119,21 @@ func (s *SnapshotService) List(ctx context.Context) ([]Snapshot, error) {
 
 // Delete deletes a snapshot by ID.
 func (s *SnapshotService) Delete(ctx context.Context, id string) error {
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotDelete)
+	method := resolveSnapshotMethod(s.version, methodSnapshotDelete)
 	_, err := s.client.Call(ctx, method, id)
 	return err
 }
 
 // Hold places a hold on a snapshot.
 func (s *SnapshotService) Hold(ctx context.Context, id string) error {
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotHold)
+	method := resolveSnapshotMethod(s.version, methodSnapshotHold)
 	_, err := s.client.Call(ctx, method, id)
 	return err
 }
 
 // Release releases a hold on a snapshot.
 func (s *SnapshotService) Release(ctx context.Context, id string) error {
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotRelease)
+	method := resolveSnapshotMethod(s.version, methodSnapshotRelease)
 	_, err := s.client.Call(ctx, method, id)
 	return err
 }
@@ -124,7 +144,7 @@ func (s *SnapshotService) Clone(ctx context.Context, snapshot, datasetDst string
 		"snapshot":    snapshot,
 		"dataset_dst": datasetDst,
 	}
-	method := ResolveSnapshotMethod(s.version, MethodSnapshotClone)
+	method := resolveSnapshotMethod(s.version, methodSnapshotClone)
 	_, err := s.client.Call(ctx, method, params)
 	return err
 }
