@@ -95,6 +95,13 @@ type wsSubscription struct {
 	ch    chan<- JobEvent
 }
 
+// wsCollectionSub represents a request to subscribe/unsubscribe from a collection.
+type wsCollectionSub struct {
+	collection string
+	ch         chan<- json.RawMessage
+	unsub      bool
+}
+
 // jobEventBuffer maintains recent events for replay to new subscribers.
 const jobEventBufferSize = 100
 
@@ -148,13 +155,14 @@ type WebSocketClient struct {
 	dialer *websocket.Dialer
 
 	// Channels - the only coordination mechanism
-	requestChan    chan wsRequest
-	readChan       chan JSONRPCResponse
-	eventChan      chan JSONRPCResponse
-	disconnectChan chan error
-	subscribeChan  chan wsSubscription
-	stopChan       chan struct{}
-	pongChan       chan struct{} // Receives pong notifications from reader
+	requestChan       chan wsRequest
+	readChan          chan JSONRPCResponse
+	eventChan         chan JSONRPCResponse
+	disconnectChan    chan error
+	subscribeChan     chan wsSubscription
+	collectionSubChan chan wsCollectionSub
+	stopChan          chan struct{}
+	pongChan          chan struct{} // Receives pong notifications from reader
 
 	testInsecure bool   // For testing with httptest servers
 	wsPath       string // Cached WebSocket path
@@ -178,15 +186,16 @@ func NewWebSocketClient(config WebSocketConfig) (*WebSocketClient, error) {
 	}
 
 	c := &WebSocketClient{
-		config:         config,
-		dialer:         dialer,
-		requestChan:    make(chan wsRequest, 100),
-		readChan:       make(chan JSONRPCResponse, 100),
-		eventChan:      make(chan JSONRPCResponse, 100),
-		disconnectChan: make(chan error, 1),
-		subscribeChan:  make(chan wsSubscription, 10),
-		stopChan:       make(chan struct{}),
-		pongChan:       make(chan struct{}, 1),
+		config:            config,
+		dialer:            dialer,
+		requestChan:       make(chan wsRequest, 100),
+		readChan:          make(chan JSONRPCResponse, 100),
+		eventChan:         make(chan JSONRPCResponse, 100),
+		disconnectChan:    make(chan error, 1),
+		subscribeChan:     make(chan wsSubscription, 10),
+		collectionSubChan: make(chan wsCollectionSub, 10),
+		stopChan:          make(chan struct{}),
+		pongChan:          make(chan struct{}, 1),
 	}
 
 	// Start writer goroutine
@@ -195,10 +204,44 @@ func NewWebSocketClient(config WebSocketConfig) (*WebSocketClient, error) {
 	return c, nil
 }
 
-// Subscribe establishes a real-time event subscription for a collection.
-// TODO: Implement in Task 4 — wire into writerLoop for real WebSocket subscriptions.
+// Subscribe creates a subscription to a TrueNAS event collection.
+// Events are delivered as json.RawMessage on the returned Subscription's C channel.
+// The writerLoop sends core.subscribe to the server and routes collection_update
+// events to the subscriber channel. Close the subscription to stop receiving events.
 func (c *WebSocketClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
-	return nil, errors.New("subscribe not yet implemented")
+	ch := make(chan json.RawMessage, 100)
+
+	sub := wsCollectionSub{
+		collection: collection,
+		ch:         ch,
+	}
+
+	select {
+	case c.collectionSubChan <- sub:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	// Trigger a connection if not already connected. The writerLoop handles
+	// core.subscribe when processing the colSub, but it needs a live connection.
+	// A ping call ensures the connection exists so the subscribe can be sent.
+	if _, err := c.Call(ctx, "core.ping", nil); err != nil {
+		// Clean up — unsubscribe
+		unsub := wsCollectionSub{collection: collection, ch: ch, unsub: true}
+		select {
+		case c.collectionSubChan <- unsub:
+		default:
+		}
+		return nil, fmt.Errorf("subscribe to %s: connection failed: %w", collection, err)
+	}
+
+	return truenas.NewSubscription[json.RawMessage](ch, func() {
+		unsub := wsCollectionSub{collection: collection, ch: ch, unsub: true}
+		select {
+		case c.collectionSubChan <- unsub:
+		default:
+		}
+	}), nil
 }
 
 // Close stops the client and cleans up resources.
@@ -215,6 +258,10 @@ func (c *WebSocketClient) writerLoop() {
 	eventBuffer := &jobEventBuffer{}
 	var nextID int64
 	var notifiedDisconnect bool // Track if we've notified subscribers of disconnect
+
+	// Collection subscription state (must be declared before handleDisconnect closure)
+	collectionSubs := make(map[string][]chan<- json.RawMessage) // collection -> subscriber channels
+	activeCollections := make(map[string]bool)                  // collections we've sent core.subscribe for
 
 	// Ping/pong state
 	var pingTicker *time.Ticker
@@ -250,6 +297,11 @@ func (c *WebSocketClient) writerLoop() {
 			// Always set flag so new subscribers know we're disconnected
 			notifiedDisconnect = true
 		}
+
+		// Reset active collection tracking — must re-subscribe after reconnect
+		for k := range activeCollections {
+			delete(activeCollections, k)
+		}
 	}
 
 	for {
@@ -270,6 +322,30 @@ func (c *WebSocketClient) writerLoop() {
 					notifyJobSubs(jobSubs, JobEventReconnected)
 				}
 				notifiedDisconnect = false
+
+				// Re-subscribe active collections after reconnect
+				resubFailed := false
+				for collection := range collectionSubs {
+					if len(collectionSubs[collection]) > 0 && !activeCollections[collection] {
+						subReq := JSONRPCRequest{
+							JSONRPC: "2.0",
+							Method:  "core.subscribe",
+							Params:  []any{collection},
+							ID:      fmt.Sprintf("col-sub-%d", nextID),
+						}
+						nextID++
+						if err := conn.WriteJSON(subReq); err != nil {
+							handleDisconnect(err)
+							req.response <- wsResponse{err: err}
+							resubFailed = true
+							break
+						}
+						activeCollections[collection] = true
+					}
+				}
+				if resubFailed {
+					continue
+				}
 			}
 
 			// Build JSON-RPC request
@@ -290,6 +366,39 @@ func (c *WebSocketClient) writerLoop() {
 			}
 
 			pending[id] = req
+
+		case colSub := <-c.collectionSubChan:
+			if colSub.unsub {
+				// Remove subscriber
+				subs := collectionSubs[colSub.collection]
+				for i, ch := range subs {
+					if ch == colSub.ch {
+						collectionSubs[colSub.collection] = append(subs[:i], subs[i+1:]...)
+						close(ch)
+						break
+					}
+				}
+			} else {
+				collectionSubs[colSub.collection] = append(collectionSubs[colSub.collection], colSub.ch)
+				// Subscribe on server if connection exists and not already subscribed
+				if conn != nil && !activeCollections[colSub.collection] {
+					subReq := JSONRPCRequest{
+						JSONRPC: "2.0",
+						Method:  "core.subscribe",
+						Params:  []any{colSub.collection},
+						ID:      fmt.Sprintf("col-sub-%d", nextID),
+					}
+					nextID++
+					if err := conn.WriteJSON(subReq); err != nil {
+						// Failed — remove and close the subscriber
+						subs := collectionSubs[colSub.collection]
+						collectionSubs[colSub.collection] = subs[:len(subs)-1]
+						close(colSub.ch)
+						continue
+					}
+					activeCollections[colSub.collection] = true
+				}
+			}
 
 		case sub := <-c.subscribeChan:
 			if sub.ch == nil {
@@ -323,7 +432,32 @@ func (c *WebSocketClient) writerLoop() {
 			}
 
 		case msg := <-c.eventChan:
-			// Handle job events - parse the raw message and buffer for replay
+			// Try to route to collection subscribers first
+			if msg.Result != nil {
+				var envelope struct {
+					Method string `json:"method"`
+					Params struct {
+						Collection string          `json:"collection"`
+						Fields     json.RawMessage `json:"fields"`
+					} `json:"params"`
+				}
+				if json.Unmarshal(msg.Result, &envelope) == nil && envelope.Method == "collection_update" {
+					if envelope.Params.Collection != "core.get_jobs" {
+						// Route to collection subscribers
+						if subs, ok := collectionSubs[envelope.Params.Collection]; ok {
+							for _, ch := range subs {
+								select {
+								case ch <- envelope.Params.Fields:
+								default:
+									// Channel full, skip to avoid blocking writer loop
+								}
+							}
+						}
+						continue
+					}
+				}
+			}
+			// Fall through to job event handling for core.get_jobs
 			c.handleJobEvent(msg, jobSubs, eventBuffer)
 
 		case err := <-c.disconnectChan:
@@ -337,6 +471,12 @@ func (c *WebSocketClient) writerLoop() {
 			for id, req := range pending {
 				req.response <- wsResponse{err: errors.New("client closed")}
 				delete(pending, id)
+			}
+			// Close all collection subscriber channels
+			for _, subs := range collectionSubs {
+				for _, ch := range subs {
+					close(ch)
+				}
 			}
 			return
 
