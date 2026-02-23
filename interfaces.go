@@ -52,3 +52,24 @@ func DefaultWriteFileParams(content []byte) WriteFileParams {
 
 // IntPtr returns a pointer to an int. Helper for setting UID/GID.
 func IntPtr(i int) *int { return &i }
+
+// Subscription represents an active event subscription.
+// Close the subscription to stop receiving events and free resources.
+type Subscription[T any] struct {
+	C      <-chan T // Events channel — closed when subscription ends
+	cancel func()  // internal cleanup
+}
+
+// Close terminates the subscription and releases resources.
+func (s *Subscription[T]) Close() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
+
+// SubscribeCaller adds real-time event subscription support.
+// Only WebSocket transport supports this; SSH returns ErrUnsupportedOperation.
+type SubscribeCaller interface {
+	AsyncCaller
+	Subscribe(ctx context.Context, collection string, params any) (*Subscription[json.RawMessage], error)
+}

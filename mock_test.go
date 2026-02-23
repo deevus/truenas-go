@@ -124,3 +124,17 @@ func (m *mockFileCaller) MkdirAll(ctx context.Context, path string, mode fs.File
 	}
 	return nil
 }
+
+// mockSubscribeCaller is a test double for the SubscribeCaller interface.
+type mockSubscribeCaller struct {
+	mockAsyncCaller
+	subscribeFunc func(ctx context.Context, collection string, params any) (*Subscription[json.RawMessage], error)
+}
+
+func (m *mockSubscribeCaller) Subscribe(ctx context.Context, collection string, params any) (*Subscription[json.RawMessage], error) {
+	m.calls = append(m.calls, mockCall{Method: "Subscribe", Params: collection})
+	if m.subscribeFunc != nil {
+		return m.subscribeFunc(ctx, collection, params)
+	}
+	return nil, nil
+}
