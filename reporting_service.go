@@ -38,7 +38,7 @@ type ReportingAggregations struct {
 type RealtimeUpdate struct {
 	CPU        map[string]RealtimeCPU
 	Memory     RealtimeMemory
-	Disks      map[string]RealtimeDisk
+	Disks      RealtimeDiskAggregate
 	Interfaces map[string]RealtimeInterface
 }
 
@@ -55,11 +55,13 @@ type RealtimeMemory struct {
 	ArcSize           int64
 }
 
-// RealtimeDisk contains per-disk I/O metrics.
-type RealtimeDisk struct {
-	ReadBytesPerSec  float64
-	WriteBytesPerSec float64
-	BusyPercent      float64
+// RealtimeDiskAggregate contains aggregate disk I/O metrics.
+type RealtimeDiskAggregate struct {
+	ReadOps     float64
+	ReadBytes   float64
+	WriteOps    float64
+	WriteBytes  float64
+	BusyPercent float64
 }
 
 // RealtimeInterface contains per-interface network metrics.
@@ -191,15 +193,6 @@ func realtimeUpdateFromResponse(resp RealtimeUpdateResponse) RealtimeUpdate {
 		cpus[k] = RealtimeCPU{Usage: v.Usage, Temperature: v.Temperature}
 	}
 
-	disks := make(map[string]RealtimeDisk, len(resp.Disks))
-	for k, v := range resp.Disks {
-		disks[k] = RealtimeDisk{
-			ReadBytesPerSec:  v.ReadBytesPerSec,
-			WriteBytesPerSec: v.WriteBytesPerSec,
-			BusyPercent:      v.BusyPercent,
-		}
-	}
-
 	ifaces := make(map[string]RealtimeInterface, len(resp.Interfaces))
 	for k, v := range resp.Interfaces {
 		ifaces[k] = RealtimeInterface{
@@ -217,7 +210,13 @@ func realtimeUpdateFromResponse(resp RealtimeUpdateResponse) RealtimeUpdate {
 			PhysicalAvailable: resp.Memory.PhysicalMemoryAvailable,
 			ArcSize:           resp.Memory.ArcSize,
 		},
-		Disks:      disks,
+		Disks: RealtimeDiskAggregate{
+			ReadOps:     resp.Disks.ReadOps,
+			ReadBytes:   resp.Disks.ReadBytes,
+			WriteOps:    resp.Disks.WriteOps,
+			WriteBytes:  resp.Disks.WriteBytes,
+			BusyPercent: resp.Disks.BusyPercent,
+		},
 		Interfaces: ifaces,
 	}
 }

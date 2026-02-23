@@ -16,9 +16,7 @@ func TestReportingService_SubscribeRealtime(t *testing.T) {
 			"physical_memory_available": 8589934592,
 			"arc_size": 4294967296
 		},
-		"disks": {
-			"sda": {"read_bytes_per_sec": 1024.0, "write_bytes_per_sec": 2048.0, "busy_percent": 15.5}
-		},
+		"disks": {"read_ops": 10, "read_bytes": 1024, "write_ops": 20, "write_bytes": 2048, "busy": 15.5},
 		"interfaces": {
 			"eno1": {"received_bytes_rate": 50000.0, "sent_bytes_rate": 25000.0, "link_state": "LINK_STATE_UP", "speed": 1000}
 		}
@@ -70,12 +68,11 @@ func TestReportingService_SubscribeRealtime(t *testing.T) {
 			t.Errorf("unexpected arc size: %d", update.Memory.ArcSize)
 		}
 		// Check disks
-		if disk, ok := update.Disks["sda"]; !ok {
-			t.Error("expected sda key in Disks map")
-		} else {
-			if disk.ReadBytesPerSec != 1024.0 {
-				t.Errorf("expected read bytes 1024.0, got %f", disk.ReadBytesPerSec)
-			}
+		if update.Disks.ReadBytes != 1024.0 {
+			t.Errorf("expected read bytes 1024.0, got %f", update.Disks.ReadBytes)
+		}
+		if update.Disks.BusyPercent != 15.5 {
+			t.Errorf("expected busy percent 15.5, got %f", update.Disks.BusyPercent)
 		}
 		// Check interfaces
 		if iface, ok := update.Interfaces["eno1"]; !ok {
@@ -113,7 +110,7 @@ func TestReportingService_SubscribeRealtime_Error(t *testing.T) {
 func TestReportingService_SubscribeRealtime_MalformedEvent(t *testing.T) {
 	rawCh := make(chan json.RawMessage, 2)
 	rawCh <- json.RawMessage(`not json`)
-	rawCh <- json.RawMessage(`{"cpu": {"cpu": {"usage": 10.0, "temperature": 50.0}}, "memory": {"physical_memory_total": 1024, "physical_memory_available": 512, "arc_size": 256}, "disks": {}, "interfaces": {}}`)
+	rawCh <- json.RawMessage(`{"cpu": {"cpu": {"usage": 10.0, "temperature": 50.0}}, "memory": {"physical_memory_total": 1024, "physical_memory_available": 512, "arc_size": 256}, "disks": {"read_ops": 0, "read_bytes": 0, "write_ops": 0, "write_bytes": 0, "busy": 0}, "interfaces": {}}`)
 	close(rawCh)
 
 	mock := &mockSubscribeCaller{

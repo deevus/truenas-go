@@ -46,7 +46,7 @@ type ReportingDataResponse struct {
 type RealtimeUpdateResponse struct {
 	CPU        map[string]RealtimeCPUResponse       `json:"cpu"`
 	Memory     RealtimeMemoryResponse               `json:"memory"`
-	Disks      map[string]RealtimeDiskResponse      `json:"disks"`
+	Disks      RealtimeDiskAggregateResponse        `json:"disks"`
 	Interfaces map[string]RealtimeInterfaceResponse `json:"interfaces"`
 }
 
@@ -63,11 +63,13 @@ type RealtimeMemoryResponse struct {
 	ArcSize                 int64 `json:"arc_size"`
 }
 
-// RealtimeDiskResponse is the wire-format for per-disk I/O metrics.
-type RealtimeDiskResponse struct {
-	ReadBytesPerSec  float64 `json:"read_bytes_per_sec"`
-	WriteBytesPerSec float64 `json:"write_bytes_per_sec"`
-	BusyPercent      float64 `json:"busy_percent"`
+// RealtimeDiskAggregateResponse is the wire-format for aggregate disk I/O metrics.
+type RealtimeDiskAggregateResponse struct {
+	ReadOps      float64 `json:"read_ops"`
+	ReadBytes    float64 `json:"read_bytes"`
+	WriteOps     float64 `json:"write_ops"`
+	WriteBytes   float64 `json:"write_bytes"`
+	BusyPercent  float64 `json:"busy"`
 }
 
 // RealtimeInterfaceResponse is the wire-format for per-interface network metrics.
