@@ -195,6 +195,12 @@ func NewWebSocketClient(config WebSocketConfig) (*WebSocketClient, error) {
 	return c, nil
 }
 
+// Subscribe establishes a real-time event subscription for a collection.
+// TODO: Implement in Task 4 — wire into writerLoop for real WebSocket subscriptions.
+func (c *WebSocketClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
+	return nil, errors.New("subscribe not yet implemented")
+}
+
 // Close stops the client and cleans up resources.
 func (c *WebSocketClient) Close() error {
 	close(c.stopChan)

@@ -701,6 +701,11 @@ func (c *SSHClient) Chown(ctx context.Context, path string, uid, gid int) error 
 	return nil
 }
 
+// Subscribe is not supported over SSH.
+func (c *SSHClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
+	return nil, ErrUnsupportedOperation
+}
+
 // ChmodRecursive recursively changes permissions on a directory and all contents
 // using the TrueNAS filesystem.setperm API. This runs with root privileges via middleware.
 func (c *SSHClient) ChmodRecursive(ctx context.Context, path string, mode fs.FileMode) error {

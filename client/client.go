@@ -51,6 +51,11 @@ type Client interface {
 	// MkdirAll creates a directory and all parent directories.
 	MkdirAll(ctx context.Context, path string, mode fs.FileMode) error
 
+	// Subscribe establishes a real-time event subscription for a collection.
+	// Returns a Subscription with a channel that receives events.
+	// Only supported over WebSocket; SSH returns ErrUnsupportedOperation.
+	Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error)
+
 	// Close closes the connection.
 	Close() error
 }
@@ -70,6 +75,7 @@ type MockClient struct {
 	ChownFunc          func(ctx context.Context, path string, uid, gid int) error
 	ChmodRecursiveFunc func(ctx context.Context, path string, mode fs.FileMode) error
 	MkdirAllFunc       func(ctx context.Context, path string, mode fs.FileMode) error
+	SubscribeFunc      func(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error)
 	CloseFunc          func() error
 }
 
@@ -159,6 +165,13 @@ func (m *MockClient) MkdirAll(ctx context.Context, path string, mode fs.FileMode
 		return m.MkdirAllFunc(ctx, path, mode)
 	}
 	return nil
+}
+
+func (m *MockClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
+	if m.SubscribeFunc != nil {
+		return m.SubscribeFunc(ctx, collection, params)
+	}
+	return nil, nil
 }
 
 func (m *MockClient) Close() error {
