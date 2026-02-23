@@ -209,6 +209,12 @@ func (r *RateLimitedClient) MkdirAll(ctx context.Context, path string, mode fs.F
 	return r.client.MkdirAll(ctx, path, mode)
 }
 
+// Subscribe delegates to the underlying client.
+// Subscriptions are long-lived and not rate-limited.
+func (r *RateLimitedClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
+	return r.client.Subscribe(ctx, collection, params)
+}
+
 // Close closes the underlying client.
 func (r *RateLimitedClient) Close() error {
 	return r.client.Close()

@@ -67,3 +67,7 @@ func (u *UnsupportedClient) ChmodRecursive(ctx context.Context, path string, mod
 func (u *UnsupportedClient) MkdirAll(ctx context.Context, path string, mode fs.FileMode) error {
 	return ErrUnsupportedOperation
 }
+
+func (u *UnsupportedClient) Subscribe(ctx context.Context, collection string, params any) (*truenas.Subscription[json.RawMessage], error) {
+	return nil, ErrUnsupportedOperation
+}

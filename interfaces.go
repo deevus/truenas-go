@@ -52,3 +52,31 @@ func DefaultWriteFileParams(content []byte) WriteFileParams {
 
 // IntPtr returns a pointer to an int. Helper for setting UID/GID.
 func IntPtr(i int) *int { return &i }
+
+// Subscription represents an active event subscription.
+// Close the subscription to stop receiving events and free resources.
+type Subscription[T any] struct {
+	C      <-chan T // Events channel — closed when subscription ends
+	cancel func()  // internal cleanup
+}
+
+// Close terminates the subscription and releases resources.
+func (s *Subscription[T]) Close() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
+
+// NewSubscription creates a new Subscription with the given channel and cancel function.
+// This constructor is needed by packages outside truenas (e.g. client) that cannot
+// set the unexported cancel field directly.
+func NewSubscription[T any](ch <-chan T, cancel func()) *Subscription[T] {
+	return &Subscription[T]{C: ch, cancel: cancel}
+}
+
+// SubscribeCaller adds real-time event subscription support.
+// Only WebSocket transport supports this; SSH returns ErrUnsupportedOperation.
+type SubscribeCaller interface {
+	AsyncCaller
+	Subscribe(ctx context.Context, collection string, params any) (*Subscription[json.RawMessage], error)
+}

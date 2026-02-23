@@ -55,7 +55,7 @@ func sampleRegistryNullDescJSON() json.RawMessage {
 
 func TestAppService_CreateApp(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			if method != "app.create" {
 				t.Errorf("expected method app.create, got %s", method)
@@ -72,7 +72,7 @@ func TestAppService_CreateApp(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if method != "app.query" {
@@ -105,11 +105,11 @@ func TestAppService_CreateApp(t *testing.T) {
 }
 
 func TestAppService_CreateApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, errors.New("connection refused")
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-app"})
@@ -125,11 +125,11 @@ func TestAppService_CreateApp_Error(t *testing.T) {
 }
 
 func TestAppService_CreateApp_NotFoundAfterCreate(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -145,11 +145,11 @@ func TestAppService_CreateApp_NotFoundAfterCreate(t *testing.T) {
 }
 
 func TestAppService_CreateApp_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -162,7 +162,7 @@ func TestAppService_CreateApp_ParseError(t *testing.T) {
 }
 
 func TestAppService_GetApp(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.query" {
 			t.Errorf("expected method app.query, got %s", method)
@@ -198,7 +198,7 @@ func TestAppService_GetApp(t *testing.T) {
 }
 
 func TestAppService_GetApp_NotFound(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -214,7 +214,7 @@ func TestAppService_GetApp_NotFound(t *testing.T) {
 }
 
 func TestAppService_GetApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("timeout")
 	}
@@ -227,7 +227,7 @@ func TestAppService_GetApp_Error(t *testing.T) {
 }
 
 func TestAppService_GetApp_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -240,7 +240,7 @@ func TestAppService_GetApp_ParseError(t *testing.T) {
 }
 
 func TestAppService_GetAppWithConfig(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.query" {
 			t.Errorf("expected method app.query, got %s", method)
@@ -291,7 +291,7 @@ func TestAppService_GetAppWithConfig(t *testing.T) {
 }
 
 func TestAppService_GetAppWithConfig_NotFound(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -307,7 +307,7 @@ func TestAppService_GetAppWithConfig_NotFound(t *testing.T) {
 }
 
 func TestAppService_GetAppWithConfig_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("timeout")
 	}
@@ -320,7 +320,7 @@ func TestAppService_GetAppWithConfig_Error(t *testing.T) {
 }
 
 func TestAppService_GetAppWithConfig_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -333,7 +333,7 @@ func TestAppService_GetAppWithConfig_ParseError(t *testing.T) {
 }
 
 func TestAppService_UpdateApp(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			if method != "app.update" {
 				t.Errorf("expected method app.update, got %s", method)
@@ -358,7 +358,7 @@ func TestAppService_UpdateApp(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return sampleAppJSON(), nil
 	}
@@ -379,11 +379,11 @@ func TestAppService_UpdateApp(t *testing.T) {
 }
 
 func TestAppService_UpdateApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, errors.New("not found")
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	_, err := svc.UpdateApp(context.Background(), "my-app", UpdateAppOpts{})
@@ -393,11 +393,11 @@ func TestAppService_UpdateApp_Error(t *testing.T) {
 }
 
 func TestAppService_UpdateApp_NotFoundAfterUpdate(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -413,7 +413,7 @@ func TestAppService_UpdateApp_NotFoundAfterUpdate(t *testing.T) {
 }
 
 func TestAppService_UpdateApp_EmptyOpts(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			slice := params.([]any)
 			p := slice[1].(map[string]any)
@@ -422,7 +422,7 @@ func TestAppService_UpdateApp_EmptyOpts(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return sampleAppJSON(), nil
 	}
@@ -438,7 +438,7 @@ func TestAppService_UpdateApp_EmptyOpts(t *testing.T) {
 }
 
 func TestAppService_ListApps(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.query" {
 			t.Errorf("expected method app.query, got %s", method)
@@ -478,7 +478,7 @@ func TestAppService_ListApps(t *testing.T) {
 }
 
 func TestAppService_ListApps_Empty(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -494,7 +494,7 @@ func TestAppService_ListApps_Empty(t *testing.T) {
 }
 
 func TestAppService_ListApps_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("network error")
 	}
@@ -507,7 +507,7 @@ func TestAppService_ListApps_Error(t *testing.T) {
 }
 
 func TestAppService_StartApp(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			if method != "app.start" {
 				t.Errorf("expected method app.start, got %s", method)
@@ -518,7 +518,7 @@ func TestAppService_StartApp(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.StartApp(context.Background(), "my-app")
@@ -528,11 +528,11 @@ func TestAppService_StartApp(t *testing.T) {
 }
 
 func TestAppService_StartApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, errors.New("app does not exist")
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.StartApp(context.Background(), "nonexistent")
@@ -542,7 +542,7 @@ func TestAppService_StartApp_Error(t *testing.T) {
 }
 
 func TestAppService_StopApp(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			if method != "app.stop" {
 				t.Errorf("expected method app.stop, got %s", method)
@@ -553,7 +553,7 @@ func TestAppService_StopApp(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.StopApp(context.Background(), "my-app")
@@ -563,11 +563,11 @@ func TestAppService_StopApp(t *testing.T) {
 }
 
 func TestAppService_StopApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, errors.New("app does not exist")
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.StopApp(context.Background(), "nonexistent")
@@ -577,7 +577,7 @@ func TestAppService_StopApp_Error(t *testing.T) {
 }
 
 func TestAppService_DeleteApp(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			if method != "app.delete" {
 				t.Errorf("expected method app.delete, got %s", method)
@@ -588,7 +588,7 @@ func TestAppService_DeleteApp(t *testing.T) {
 			}
 			return nil, nil
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.DeleteApp(context.Background(), "my-app")
@@ -598,11 +598,11 @@ func TestAppService_DeleteApp(t *testing.T) {
 }
 
 func TestAppService_DeleteApp_Error(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, errors.New("permission denied")
 		},
-	}
+	}}
 
 	svc := NewAppService(mock, Version{})
 	err := svc.DeleteApp(context.Background(), "my-app")
@@ -615,7 +615,7 @@ func TestAppService_DeleteApp_Error(t *testing.T) {
 
 func TestAppService_CreateRegistry(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -679,7 +679,7 @@ func TestAppService_CreateRegistry(t *testing.T) {
 }
 
 func TestAppService_CreateRegistry_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("connection refused")
 	}
@@ -695,7 +695,7 @@ func TestAppService_CreateRegistry_Error(t *testing.T) {
 }
 
 func TestAppService_CreateRegistry_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -709,7 +709,7 @@ func TestAppService_CreateRegistry_ParseError(t *testing.T) {
 
 func TestAppService_CreateRegistry_NotFoundAfterCreate(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -734,7 +734,7 @@ func TestAppService_CreateRegistry_NotFoundAfterCreate(t *testing.T) {
 
 func TestAppService_CreateRegistry_NullDescription(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -762,7 +762,7 @@ func TestAppService_CreateRegistry_NullDescription(t *testing.T) {
 }
 
 func TestAppService_GetRegistry(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.registry.query" {
 			t.Errorf("expected method app.registry.query, got %s", method)
@@ -797,7 +797,7 @@ func TestAppService_GetRegistry(t *testing.T) {
 }
 
 func TestAppService_GetRegistry_NotFound(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -813,7 +813,7 @@ func TestAppService_GetRegistry_NotFound(t *testing.T) {
 }
 
 func TestAppService_GetRegistry_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("timeout")
 	}
@@ -826,7 +826,7 @@ func TestAppService_GetRegistry_Error(t *testing.T) {
 }
 
 func TestAppService_GetRegistry_NullDescription(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return sampleRegistryNullDescJSON(), nil
 	}
@@ -845,7 +845,7 @@ func TestAppService_GetRegistry_NullDescription(t *testing.T) {
 }
 
 func TestAppService_ListRegistries(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.registry.query" {
 			t.Errorf("expected method app.registry.query, got %s", method)
@@ -882,7 +882,7 @@ func TestAppService_ListRegistries(t *testing.T) {
 }
 
 func TestAppService_ListRegistries_Empty(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`[]`), nil
 	}
@@ -898,7 +898,7 @@ func TestAppService_ListRegistries_Empty(t *testing.T) {
 }
 
 func TestAppService_ListRegistries_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("network error")
 	}
@@ -912,7 +912,7 @@ func TestAppService_ListRegistries_Error(t *testing.T) {
 
 func TestAppService_UpdateRegistry(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -963,7 +963,7 @@ func TestAppService_UpdateRegistry(t *testing.T) {
 }
 
 func TestAppService_UpdateRegistry_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("not found")
 	}
@@ -977,7 +977,7 @@ func TestAppService_UpdateRegistry_Error(t *testing.T) {
 
 func TestAppService_UpdateRegistry_NotFoundAfterUpdate(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -1001,7 +1001,7 @@ func TestAppService_UpdateRegistry_NotFoundAfterUpdate(t *testing.T) {
 }
 
 func TestAppService_DeleteRegistry(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		if method != "app.registry.delete" {
 			t.Errorf("expected method app.registry.delete, got %s", method)
@@ -1021,7 +1021,7 @@ func TestAppService_DeleteRegistry(t *testing.T) {
 }
 
 func TestAppService_DeleteRegistry_Error(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("permission denied")
 	}
@@ -1073,6 +1073,63 @@ func TestAppFromResponse_NilConfig(t *testing.T) {
 	}
 	if app.Config != nil {
 		t.Errorf("expected nil config, got %v", app.Config)
+	}
+}
+
+func TestAppFromResponse_WithWorkloads(t *testing.T) {
+	resp := AppResponse{
+		Name:             "plex",
+		State:            "RUNNING",
+		Version:          "1.0.0",
+		HumanVersion:     "Plex 1.0.0",
+		LatestVersion:    "1.1.0",
+		UpgradeAvailable: true,
+		ActiveWorkloads: AppActiveWorkloadsResponse{
+			Containers: 2,
+			UsedPorts: []AppUsedPortResponse{
+				{ContainerPort: 32400, HostPort: 32400, Protocol: "tcp"},
+			},
+			ContainerDetails: []AppContainerDetailsResponse{
+				{
+					ID:          "abc123",
+					ServiceName: "plex",
+					Image:       "plexinc/pms-docker:latest",
+					State:       "running",
+				},
+			},
+		},
+	}
+
+	app := appFromResponse(resp)
+	if app.Version != "1.0.0" {
+		t.Errorf("expected version 1.0.0, got %s", app.Version)
+	}
+	if app.HumanVersion != "Plex 1.0.0" {
+		t.Errorf("expected human version 'Plex 1.0.0', got %s", app.HumanVersion)
+	}
+	if app.LatestVersion != "1.1.0" {
+		t.Errorf("expected latest version 1.1.0, got %s", app.LatestVersion)
+	}
+	if !app.UpgradeAvailable {
+		t.Error("expected UpgradeAvailable=true")
+	}
+	if app.ActiveWorkloads.Containers != 2 {
+		t.Errorf("expected 2 containers, got %d", app.ActiveWorkloads.Containers)
+	}
+	if len(app.ActiveWorkloads.UsedPorts) != 1 {
+		t.Fatalf("expected 1 used port, got %d", len(app.ActiveWorkloads.UsedPorts))
+	}
+	if app.ActiveWorkloads.UsedPorts[0].ContainerPort != 32400 {
+		t.Errorf("expected container port 32400, got %d", app.ActiveWorkloads.UsedPorts[0].ContainerPort)
+	}
+	if len(app.ActiveWorkloads.ContainerDetails) != 1 {
+		t.Fatalf("expected 1 container detail, got %d", len(app.ActiveWorkloads.ContainerDetails))
+	}
+	if app.ActiveWorkloads.ContainerDetails[0].State != ContainerStateRunning {
+		t.Errorf("expected running state, got %s", app.ActiveWorkloads.ContainerDetails[0].State)
+	}
+	if app.ActiveWorkloads.ContainerDetails[0].Image != "plexinc/pms-docker:latest" {
+		t.Errorf("expected image plexinc/pms-docker:latest, got %s", app.ActiveWorkloads.ContainerDetails[0].Image)
 	}
 }
 
@@ -1236,7 +1293,7 @@ func TestRegistryParams_EmptyDescription(t *testing.T) {
 }
 
 func TestAppService_ListApps_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -1249,7 +1306,7 @@ func TestAppService_ListApps_ParseError(t *testing.T) {
 }
 
 func TestAppService_ListRegistries_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -1262,7 +1319,7 @@ func TestAppService_ListRegistries_ParseError(t *testing.T) {
 }
 
 func TestAppService_GetRegistry_ParseError(t *testing.T) {
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return json.RawMessage(`not json`), nil
 	}
@@ -1275,11 +1332,11 @@ func TestAppService_GetRegistry_ParseError(t *testing.T) {
 }
 
 func TestAppService_CreateApp_ReReadError(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("re-read failed")
 	}
@@ -1295,11 +1352,11 @@ func TestAppService_CreateApp_ReReadError(t *testing.T) {
 }
 
 func TestAppService_UpdateApp_ReReadError(t *testing.T) {
-	mock := &mockAsyncCaller{
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
 		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 			return nil, nil
 		},
-	}
+	}}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("re-read failed")
 	}
@@ -1316,7 +1373,7 @@ func TestAppService_UpdateApp_ReReadError(t *testing.T) {
 
 func TestAppService_CreateRegistry_ReReadError(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -1337,7 +1394,7 @@ func TestAppService_CreateRegistry_ReReadError(t *testing.T) {
 
 func TestAppService_UpdateRegistry_ReReadError(t *testing.T) {
 	callCount := 0
-	mock := &mockAsyncCaller{}
+	mock := &mockSubscribeCaller{}
 	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		callCount++
 		if callCount == 1 {
@@ -1353,5 +1410,383 @@ func TestAppService_UpdateRegistry_ReReadError(t *testing.T) {
 	}
 	if reg != nil {
 		t.Error("expected nil registry on re-read error")
+	}
+}
+
+// --- UpgradeSummary tests ---
+
+func TestAppService_UpgradeSummary(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		if method != "app.upgrade_summary" {
+			t.Errorf("expected method app.upgrade_summary, got %s", method)
+		}
+		slice, ok := params.([]any)
+		if !ok {
+			t.Fatal("expected []any params")
+		}
+		if len(slice) != 1 || slice[0] != "plex" {
+			t.Errorf("expected [plex], got %v", slice)
+		}
+		return json.RawMessage(`{
+			"latest_version": "1.2.0",
+			"latest_human_version": "Plex 1.2.0",
+			"upgrade_version": "1.1.0",
+			"upgrade_human_version": "Plex 1.1.0",
+			"changelog": "Bug fixes and improvements",
+			"available_versions_for_upgrade": [
+				{"version": "1.1.0", "human_version": "Plex 1.1.0"},
+				{"version": "1.2.0", "human_version": "Plex 1.2.0"}
+			]
+		}`), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	summary, err := svc.UpgradeSummary(context.Background(), "plex")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if summary == nil {
+		t.Fatal("expected non-nil summary")
+	}
+	if summary.LatestVersion != "1.2.0" {
+		t.Errorf("expected latest version 1.2.0, got %s", summary.LatestVersion)
+	}
+	if summary.LatestHumanVersion != "Plex 1.2.0" {
+		t.Errorf("expected latest human version 'Plex 1.2.0', got %s", summary.LatestHumanVersion)
+	}
+	if summary.UpgradeVersion != "1.1.0" {
+		t.Errorf("expected upgrade version 1.1.0, got %s", summary.UpgradeVersion)
+	}
+	if summary.UpgradeHumanVersion != "Plex 1.1.0" {
+		t.Errorf("expected upgrade human version 'Plex 1.1.0', got %s", summary.UpgradeHumanVersion)
+	}
+	if summary.Changelog != "Bug fixes and improvements" {
+		t.Errorf("expected changelog 'Bug fixes and improvements', got %s", summary.Changelog)
+	}
+	if len(summary.AvailableVersions) != 2 {
+		t.Fatalf("expected 2 available versions, got %d", len(summary.AvailableVersions))
+	}
+	if summary.AvailableVersions[0].Version != "1.1.0" {
+		t.Errorf("expected first version 1.1.0, got %s", summary.AvailableVersions[0].Version)
+	}
+	if summary.AvailableVersions[1].Version != "1.2.0" {
+		t.Errorf("expected second version 1.2.0, got %s", summary.AvailableVersions[1].Version)
+	}
+}
+
+func TestAppService_UpgradeSummary_Error(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return nil, errors.New("app not found")
+	}
+
+	svc := NewAppService(mock, Version{})
+	summary, err := svc.UpgradeSummary(context.Background(), "nonexistent")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if summary != nil {
+		t.Error("expected nil summary on error")
+	}
+}
+
+// --- ListImages tests ---
+
+func TestAppService_ListImages(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		if method != "app.image.query" {
+			t.Errorf("expected method app.image.query, got %s", method)
+		}
+		if params != nil {
+			t.Error("expected nil params for ListImages")
+		}
+		return json.RawMessage(`[
+			{
+				"id": "sha256:abc123",
+				"repo_tags": ["nginx:latest", "nginx:1.25"],
+				"size": 187654321,
+				"created": "2024-01-15T10:30:00Z",
+				"dangling": false
+			},
+			{
+				"id": "sha256:def456",
+				"repo_tags": [],
+				"size": 52345678,
+				"created": "2024-01-10T08:00:00Z",
+				"dangling": true
+			}
+		]`), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	images, err := svc.ListImages(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(images) != 2 {
+		t.Fatalf("expected 2 images, got %d", len(images))
+	}
+	if images[0].ID != "sha256:abc123" {
+		t.Errorf("expected first image ID sha256:abc123, got %s", images[0].ID)
+	}
+	if len(images[0].RepoTags) != 2 {
+		t.Fatalf("expected 2 repo tags, got %d", len(images[0].RepoTags))
+	}
+	if images[0].RepoTags[0] != "nginx:latest" {
+		t.Errorf("expected first tag nginx:latest, got %s", images[0].RepoTags[0])
+	}
+	if images[0].Size != 187654321 {
+		t.Errorf("expected size 187654321, got %d", images[0].Size)
+	}
+	if images[0].Created != "2024-01-15T10:30:00Z" {
+		t.Errorf("expected created 2024-01-15T10:30:00Z, got %s", images[0].Created)
+	}
+	if images[0].Dangling {
+		t.Error("expected first image not dangling")
+	}
+	if !images[1].Dangling {
+		t.Error("expected second image dangling")
+	}
+	if len(images[1].RepoTags) != 0 {
+		t.Errorf("expected empty repo tags for dangling image, got %v", images[1].RepoTags)
+	}
+}
+
+func TestAppService_ListImages_Empty(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return json.RawMessage(`[]`), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	images, err := svc.ListImages(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(images) != 0 {
+		t.Errorf("expected 0 images, got %d", len(images))
+	}
+}
+
+func TestAppService_ListImages_Error(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return nil, errors.New("network error")
+	}
+
+	svc := NewAppService(mock, Version{})
+	_, err := svc.ListImages(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// --- AvailableSpace tests ---
+
+func TestAppService_AvailableSpace(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		if method != "app.available_space" {
+			t.Errorf("expected method app.available_space, got %s", method)
+		}
+		if params != nil {
+			t.Error("expected nil params for AvailableSpace")
+		}
+		return json.RawMessage(`1099511627776`), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	space, err := svc.AvailableSpace(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if space != 1099511627776 {
+		t.Errorf("expected 1099511627776 bytes, got %d", space)
+	}
+}
+
+func TestAppService_AvailableSpace_Error(t *testing.T) {
+	mock := &mockSubscribeCaller{}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return nil, errors.New("pool not found")
+	}
+
+	svc := NewAppService(mock, Version{})
+	space, err := svc.AvailableSpace(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if space != 0 {
+		t.Errorf("expected 0 on error, got %d", space)
+	}
+}
+
+// --- UpgradeApp tests ---
+
+func TestAppService_UpgradeApp(t *testing.T) {
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			if method != "app.upgrade" {
+				t.Errorf("expected method app.upgrade, got %s", method)
+			}
+			slice, ok := params.([]any)
+			if !ok {
+				t.Fatal("expected []any params")
+			}
+			if len(slice) != 1 || slice[0] != "plex" {
+				t.Errorf("expected [plex], got %v", slice)
+			}
+			return nil, nil
+		},
+	}}
+
+	svc := NewAppService(mock, Version{})
+	err := svc.UpgradeApp(context.Background(), "plex")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAppService_UpgradeApp_Error(t *testing.T) {
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return nil, errors.New("upgrade failed")
+		},
+	}}
+
+	svc := NewAppService(mock, Version{})
+	err := svc.UpgradeApp(context.Background(), "plex")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "upgrade failed" {
+		t.Errorf("expected 'upgrade failed', got %q", err.Error())
+	}
+}
+
+// --- RedeployApp tests ---
+
+func TestAppService_RedeployApp(t *testing.T) {
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			if method != "app.redeploy" {
+				t.Errorf("expected method app.redeploy, got %s", method)
+			}
+			name, ok := params.(string)
+			if !ok || name != "plex" {
+				t.Errorf("expected name plex, got %v", params)
+			}
+			return nil, nil
+		},
+	}}
+
+	svc := NewAppService(mock, Version{})
+	err := svc.RedeployApp(context.Background(), "plex")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAppService_RedeployApp_Error(t *testing.T) {
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return nil, errors.New("redeploy failed")
+		},
+	}}
+
+	svc := NewAppService(mock, Version{})
+	err := svc.RedeployApp(context.Background(), "plex")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "redeploy failed" {
+		t.Errorf("expected 'redeploy failed', got %q", err.Error())
+	}
+}
+
+// --- Conversion function tests ---
+
+func TestAppUpgradeSummaryFromResponse(t *testing.T) {
+	changelog := "Major update"
+	resp := AppUpgradeSummaryResponse{
+		LatestVersion:       "2.0.0",
+		LatestHumanVersion:  "App 2.0.0",
+		UpgradeVersion:      "1.5.0",
+		UpgradeHumanVersion: "App 1.5.0",
+		Changelog:           &changelog,
+		AvailableVersions: []AppAvailableVersionResponse{
+			{Version: "1.5.0", HumanVersion: "App 1.5.0"},
+			{Version: "2.0.0", HumanVersion: "App 2.0.0"},
+		},
+	}
+
+	summary := appUpgradeSummaryFromResponse(resp)
+
+	if summary.LatestVersion != "2.0.0" {
+		t.Errorf("expected latest version 2.0.0, got %s", summary.LatestVersion)
+	}
+	if summary.LatestHumanVersion != "App 2.0.0" {
+		t.Errorf("expected latest human version 'App 2.0.0', got %s", summary.LatestHumanVersion)
+	}
+	if summary.UpgradeVersion != "1.5.0" {
+		t.Errorf("expected upgrade version 1.5.0, got %s", summary.UpgradeVersion)
+	}
+	if summary.UpgradeHumanVersion != "App 1.5.0" {
+		t.Errorf("expected upgrade human version 'App 1.5.0', got %s", summary.UpgradeHumanVersion)
+	}
+	if summary.Changelog != "Major update" {
+		t.Errorf("expected changelog 'Major update', got %s", summary.Changelog)
+	}
+	if len(summary.AvailableVersions) != 2 {
+		t.Fatalf("expected 2 versions, got %d", len(summary.AvailableVersions))
+	}
+	if summary.AvailableVersions[0].Version != "1.5.0" {
+		t.Errorf("expected first version 1.5.0, got %s", summary.AvailableVersions[0].Version)
+	}
+}
+
+func TestAppUpgradeSummaryFromResponse_NilChangelog(t *testing.T) {
+	resp := AppUpgradeSummaryResponse{
+		LatestVersion:       "2.0.0",
+		LatestHumanVersion:  "App 2.0.0",
+		UpgradeVersion:      "1.5.0",
+		UpgradeHumanVersion: "App 1.5.0",
+		Changelog:           nil,
+		AvailableVersions:   []AppAvailableVersionResponse{},
+	}
+
+	summary := appUpgradeSummaryFromResponse(resp)
+	if summary.Changelog != "" {
+		t.Errorf("expected empty changelog for nil, got %q", summary.Changelog)
+	}
+}
+
+func TestAppImageFromResponse(t *testing.T) {
+	resp := AppImageResponse{
+		ID:       "sha256:abc",
+		RepoTags: []string{"test:latest"},
+		Size:     12345,
+		Created:  "2024-06-01T00:00:00Z",
+		Dangling: true,
+	}
+
+	image := appImageFromResponse(resp)
+
+	if image.ID != "sha256:abc" {
+		t.Errorf("expected ID sha256:abc, got %s", image.ID)
+	}
+	if len(image.RepoTags) != 1 || image.RepoTags[0] != "test:latest" {
+		t.Errorf("expected repo tags [test:latest], got %v", image.RepoTags)
+	}
+	if image.Size != 12345 {
+		t.Errorf("expected size 12345, got %d", image.Size)
+	}
+	if image.Created != "2024-06-01T00:00:00Z" {
+		t.Errorf("expected created 2024-06-01T00:00:00Z, got %s", image.Created)
+	}
+	if !image.Dangling {
+		t.Error("expected dangling true")
 	}
 }

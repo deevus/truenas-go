@@ -42,6 +42,7 @@ func TestUnsupportedClient_OperationsReturnError(t *testing.T) {
 		{"Chown", func() error { return c.Chown(ctx, "/test", 0, 0) }},
 		{"ChmodRecursive", func() error { return c.ChmodRecursive(ctx, "/test", 0644) }},
 		{"MkdirAll", func() error { return c.MkdirAll(ctx, "/test", 0755) }},
+		{"Subscribe", func() error { _, err := c.Subscribe(ctx, "test.collection", nil); return err }},
 	}
 
 	for _, tt := range tests {
