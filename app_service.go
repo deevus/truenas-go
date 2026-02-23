@@ -75,14 +75,66 @@ type CreateRegistryOpts struct {
 // UpdateRegistryOpts contains options for updating a registry.
 type UpdateRegistryOpts = CreateRegistryOpts
 
+// AppUpgradeSummary is the user-facing upgrade summary.
+type AppUpgradeSummary struct {
+	LatestVersion       string
+	LatestHumanVersion  string
+	UpgradeVersion      string
+	UpgradeHumanVersion string
+	Changelog           string
+	AvailableVersions   []string
+}
+
+// AppImage is the user-facing representation of a container image.
+type AppImage struct {
+	ID       string
+	RepoTags []string
+	Size     int64
+	Created  string
+	Dangling bool
+}
+
+// AppStats represents stats for an app.
+type AppStats struct {
+	AppName    string
+	Containers []AppContainerStats
+}
+
+// AppContainerStats represents per-container resource usage.
+type AppContainerStats struct {
+	ID       string
+	CPUUsage float64
+	MemUsage int64
+	Networks map[string]AppContainerNetworkStats
+}
+
+// AppContainerNetworkStats represents per-interface network stats for a container.
+type AppContainerNetworkStats struct {
+	RxBytes int64
+	TxBytes int64
+}
+
+// AppContainerLogEntry represents a log line from a container.
+type AppContainerLogEntry struct {
+	Timestamp string
+	Message   string
+}
+
+// ContainerLogOpts specifies which container to follow logs for.
+type ContainerLogOpts struct {
+	AppName     string
+	ContainerID string
+	TailLines   int
+}
+
 // AppService provides typed methods for the app.* API namespace.
 type AppService struct {
-	client  AsyncCaller
+	client  SubscribeCaller
 	version Version
 }
 
 // NewAppService creates a new AppService.
-func NewAppService(c AsyncCaller, v Version) *AppService {
+func NewAppService(c SubscribeCaller, v Version) *AppService {
 	return &AppService{client: c, version: v}
 }
 
@@ -289,6 +341,180 @@ func (s *AppService) UpdateRegistry(ctx context.Context, id int64, opts UpdateRe
 func (s *AppService) DeleteRegistry(ctx context.Context, id int64) error {
 	_, err := s.client.Call(ctx, "app.registry.delete", id)
 	return err
+}
+
+// UpgradeSummary returns the upgrade summary for an app.
+func (s *AppService) UpgradeSummary(ctx context.Context, name string) (*AppUpgradeSummary, error) {
+	result, err := s.client.Call(ctx, "app.upgrade_summary", []any{name})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp AppUpgradeSummaryResponse
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, fmt.Errorf("parse upgrade summary response: %w", err)
+	}
+
+	summary := appUpgradeSummaryFromResponse(resp)
+	return &summary, nil
+}
+
+// ListImages returns all container images.
+func (s *AppService) ListImages(ctx context.Context) ([]AppImage, error) {
+	result, err := s.client.Call(ctx, "app.image.query", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []AppImageResponse
+	if err := json.Unmarshal(result, &responses); err != nil {
+		return nil, fmt.Errorf("parse image query response: %w", err)
+	}
+
+	images := make([]AppImage, len(responses))
+	for i, resp := range responses {
+		images[i] = appImageFromResponse(resp)
+	}
+	return images, nil
+}
+
+// AvailableSpace returns the available space in bytes for app storage.
+func (s *AppService) AvailableSpace(ctx context.Context) (int64, error) {
+	result, err := s.client.Call(ctx, "app.available_space", nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var space int64
+	if err := json.Unmarshal(result, &space); err != nil {
+		return 0, fmt.Errorf("parse available space response: %w", err)
+	}
+	return space, nil
+}
+
+// UpgradeApp upgrades an app by name.
+func (s *AppService) UpgradeApp(ctx context.Context, name string) error {
+	_, err := s.client.CallAndWait(ctx, "app.upgrade", []any{name})
+	return err
+}
+
+// RedeployApp redeploys an app by name.
+func (s *AppService) RedeployApp(ctx context.Context, name string) error {
+	_, err := s.client.CallAndWait(ctx, "app.redeploy", name)
+	return err
+}
+
+// SubscribeStats subscribes to app.stats events for real-time app resource usage.
+func (s *AppService) SubscribeStats(ctx context.Context) (*Subscription[[]AppStats], error) {
+	rawSub, err := s.client.Subscribe(ctx, "app.stats", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	typedCh := make(chan []AppStats, 100)
+	go func() {
+		defer close(typedCh)
+		for raw := range rawSub.C {
+			var responses []AppStatsResponse
+			if err := json.Unmarshal(raw, &responses); err != nil {
+				continue
+			}
+			stats := make([]AppStats, len(responses))
+			for i, r := range responses {
+				stats[i] = appStatsFromResponse(r)
+			}
+			typedCh <- stats
+		}
+	}()
+
+	return &Subscription[[]AppStats]{
+		C:      typedCh,
+		cancel: rawSub.Close,
+	}, nil
+}
+
+// SubscribeContainerLogs subscribes to log output from a specific container.
+func (s *AppService) SubscribeContainerLogs(ctx context.Context, opts ContainerLogOpts) (*Subscription[AppContainerLogEntry], error) {
+	params := map[string]any{
+		"app_name":     opts.AppName,
+		"container_id": opts.ContainerID,
+		"tail_lines":   opts.TailLines,
+	}
+
+	rawSub, err := s.client.Subscribe(ctx, "app.container_log_follow", params)
+	if err != nil {
+		return nil, err
+	}
+
+	typedCh := make(chan AppContainerLogEntry, 100)
+	go func() {
+		defer close(typedCh)
+		for raw := range rawSub.C {
+			var resp AppContainerLogEntryResponse
+			if err := json.Unmarshal(raw, &resp); err != nil {
+				continue
+			}
+			typedCh <- appContainerLogFromResponse(resp)
+		}
+	}()
+
+	return &Subscription[AppContainerLogEntry]{
+		C:      typedCh,
+		cancel: rawSub.Close,
+	}, nil
+}
+
+func appStatsFromResponse(resp AppStatsResponse) AppStats {
+	containers := make([]AppContainerStats, len(resp.Containers))
+	for i, c := range resp.Containers {
+		networks := make(map[string]AppContainerNetworkStats, len(c.Networks))
+		for k, v := range c.Networks {
+			networks[k] = AppContainerNetworkStats{
+				RxBytes: v.RxBytes,
+				TxBytes: v.TxBytes,
+			}
+		}
+		containers[i] = AppContainerStats{
+			ID:       c.ID,
+			CPUUsage: c.CPUUsage,
+			MemUsage: c.MemUsage,
+			Networks: networks,
+		}
+	}
+	return AppStats{
+		AppName:    resp.AppName,
+		Containers: containers,
+	}
+}
+
+func appContainerLogFromResponse(resp AppContainerLogEntryResponse) AppContainerLogEntry {
+	return AppContainerLogEntry{
+		Timestamp: resp.Timestamp,
+		Message:   resp.Message,
+	}
+}
+
+// appUpgradeSummaryFromResponse converts a wire-format AppUpgradeSummaryResponse to a user-facing AppUpgradeSummary.
+func appUpgradeSummaryFromResponse(resp AppUpgradeSummaryResponse) AppUpgradeSummary {
+	return AppUpgradeSummary{
+		LatestVersion:       resp.LatestVersion,
+		LatestHumanVersion:  resp.LatestHumanVersion,
+		UpgradeVersion:      resp.UpgradeVersion,
+		UpgradeHumanVersion: resp.UpgradeHumanVersion,
+		Changelog:           resp.Changelog,
+		AvailableVersions:   resp.AvailableVersions,
+	}
+}
+
+// appImageFromResponse converts a wire-format AppImageResponse to a user-facing AppImage.
+func appImageFromResponse(resp AppImageResponse) AppImage {
+	return AppImage{
+		ID:       resp.ID,
+		RepoTags: resp.RepoTags,
+		Size:     resp.Size,
+		Created:  resp.Created,
+		Dangling: resp.Dangling,
+	}
 }
 
 // createAppParams converts CreateAppOpts to API parameters.
