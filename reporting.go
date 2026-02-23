@@ -42,6 +42,42 @@ type ReportingDataResponse struct {
 	} `json:"aggregations"`
 }
 
+// RealtimeUpdateResponse represents the wire-format for reporting.realtime events.
+type RealtimeUpdateResponse struct {
+	CPU        map[string]RealtimeCPUResponse       `json:"cpu"`
+	Memory     RealtimeMemoryResponse               `json:"memory"`
+	Disks      map[string]RealtimeDiskResponse      `json:"disks"`
+	Interfaces map[string]RealtimeInterfaceResponse `json:"interfaces"`
+}
+
+// RealtimeCPUResponse is the wire-format for per-CPU metrics.
+type RealtimeCPUResponse struct {
+	Usage       float64 `json:"usage"`
+	Temperature float64 `json:"temperature"`
+}
+
+// RealtimeMemoryResponse is the wire-format for memory metrics.
+type RealtimeMemoryResponse struct {
+	PhysicalMemoryTotal     int64 `json:"physical_memory_total"`
+	PhysicalMemoryAvailable int64 `json:"physical_memory_available"`
+	ArcSize                 int64 `json:"arc_size"`
+}
+
+// RealtimeDiskResponse is the wire-format for per-disk I/O metrics.
+type RealtimeDiskResponse struct {
+	ReadBytesPerSec  float64 `json:"read_bytes_per_sec"`
+	WriteBytesPerSec float64 `json:"write_bytes_per_sec"`
+	BusyPercent      float64 `json:"busy_percent"`
+}
+
+// RealtimeInterfaceResponse is the wire-format for per-interface network metrics.
+type RealtimeInterfaceResponse struct {
+	ReceivedBytesRate float64 `json:"received_bytes_rate"`
+	SentBytesRate     float64 `json:"sent_bytes_rate"`
+	LinkState         string  `json:"link_state"`
+	Speed             int     `json:"speed"`
+}
+
 // ReportingGetDataParams contains parameters for the GetData call.
 type ReportingGetDataParams struct {
 	Graphs []ReportingGraphQuery

@@ -29,6 +29,14 @@ func TestMockReportingService_DefaultsToNil(t *testing.T) {
 	if data != nil {
 		t.Fatalf("expected nil result, got: %v", data)
 	}
+
+	sub, err := mock.SubscribeRealtime(ctx)
+	if err != nil {
+		t.Fatalf("expected nil error, got: %v", err)
+	}
+	if sub != nil {
+		t.Fatalf("expected nil result, got: %v", sub)
+	}
 }
 
 func TestMockReportingService_CallsListGraphsFunc(t *testing.T) {
@@ -73,5 +81,36 @@ func TestMockReportingService_CallsGetDataFunc(t *testing.T) {
 	}
 	if len(data) != 1 {
 		t.Fatalf("expected 1 data, got %d", len(data))
+	}
+}
+
+func TestMockReportingService_CallsSubscribeRealtimeFunc(t *testing.T) {
+	called := false
+	ch := make(chan RealtimeUpdate)
+	mock := &MockReportingService{
+		SubscribeRealtimeFunc: func(ctx context.Context) (*Subscription[RealtimeUpdate], error) {
+			called = true
+			return &Subscription[RealtimeUpdate]{C: ch, cancel: func() { close(ch) }}, nil
+		},
+	}
+
+	sub, err := mock.SubscribeRealtime(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected SubscribeRealtimeFunc to be called")
+	}
+	sub.Close()
+}
+
+func TestMockReportingService_SubscribeRealtimeDefaultsToNil(t *testing.T) {
+	mock := &MockReportingService{}
+	sub, err := mock.SubscribeRealtime(context.Background())
+	if err != nil {
+		t.Fatalf("expected nil error, got: %v", err)
+	}
+	if sub != nil {
+		t.Fatal("expected nil subscription")
 	}
 }

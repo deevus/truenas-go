@@ -6,6 +6,7 @@ import "context"
 type ReportingServiceAPI interface {
 	ListGraphs(ctx context.Context) ([]ReportingGraph, error)
 	GetData(ctx context.Context, params ReportingGetDataParams) ([]ReportingData, error)
+	SubscribeRealtime(ctx context.Context) (*Subscription[RealtimeUpdate], error)
 }
 
 // Compile-time checks.
@@ -14,8 +15,9 @@ var _ ReportingServiceAPI = (*MockReportingService)(nil)
 
 // MockReportingService is a test double for ReportingServiceAPI.
 type MockReportingService struct {
-	ListGraphsFunc func(ctx context.Context) ([]ReportingGraph, error)
-	GetDataFunc    func(ctx context.Context, params ReportingGetDataParams) ([]ReportingData, error)
+	ListGraphsFunc        func(ctx context.Context) ([]ReportingGraph, error)
+	GetDataFunc           func(ctx context.Context, params ReportingGetDataParams) ([]ReportingData, error)
+	SubscribeRealtimeFunc func(ctx context.Context) (*Subscription[RealtimeUpdate], error)
 }
 
 func (m *MockReportingService) ListGraphs(ctx context.Context) ([]ReportingGraph, error) {
@@ -28,6 +30,13 @@ func (m *MockReportingService) ListGraphs(ctx context.Context) ([]ReportingGraph
 func (m *MockReportingService) GetData(ctx context.Context, params ReportingGetDataParams) ([]ReportingData, error) {
 	if m.GetDataFunc != nil {
 		return m.GetDataFunc(ctx, params)
+	}
+	return nil, nil
+}
+
+func (m *MockReportingService) SubscribeRealtime(ctx context.Context) (*Subscription[RealtimeUpdate], error) {
+	if m.SubscribeRealtimeFunc != nil {
+		return m.SubscribeRealtimeFunc(ctx)
 	}
 	return nil, nil
 }
