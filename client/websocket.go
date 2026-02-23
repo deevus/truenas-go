@@ -31,7 +31,7 @@ type WebSocketConfig struct {
 	MaxRetries         int
 	PingInterval       time.Duration // Interval between pings (0 = disabled, default: 30s)
 	PingTimeout        time.Duration // Time to wait for pong (default: 10s)
-	Fallback           Client        // Required for SSH-only operations
+	Fallback           Client        // Optional SSH client for file operations (defaults to UnsupportedClient)
 }
 
 // Validate validates the WebSocketConfig and sets defaults.
@@ -46,7 +46,7 @@ func (c *WebSocketConfig) Validate() error {
 		return errors.New("api_key is required")
 	}
 	if c.Fallback == nil {
-		return errors.New("fallback client is required")
+		c.Fallback = &UnsupportedClient{}
 	}
 
 	// Set defaults
@@ -159,7 +159,7 @@ type WebSocketClient struct {
 	testInsecure bool   // For testing with httptest servers
 	wsPath       string // Cached WebSocket path
 
-	// Version (cached from fallback during Connect)
+	// Version (cached during Connect, from fallback or native detection)
 	version   truenas.Version
 	connected bool
 }
@@ -468,7 +468,9 @@ func (c *WebSocketClient) connect(ctx context.Context) (*websocket.Conn, error) 
 		version := c.version
 		// TrueNAS 25.0+ uses /api/current with JSON-RPC 2.0 protocol
 		// TrueNAS 24.x uses /websocket with a legacy DDP-like protocol (not supported)
-		if !version.AtLeast(25, 0) {
+		// When version is zero (undetected), we're in the bootstrap phase during
+		// Connect. Default to /api/current and let detectVersion handle the check.
+		if !version.IsZero() && !version.AtLeast(25, 0) {
 			return nil, fmt.Errorf("%w (detected version: %s)", ErrUnsupportedVersion, version.Raw)
 		}
 		c.wsPath = "/api/current"
@@ -806,15 +808,58 @@ func (c *WebSocketClient) unsubscribeJob(jobID int64) {
 	}
 }
 
-// Connect establishes connection via fallback client and caches version.
+// Connect establishes connection and detects TrueNAS version.
 // Must be called before using the client.
+//
+// Version detection strategy:
+//   - If the fallback client provides a version (e.g. SSH client), use it.
+//   - Otherwise (e.g. UnsupportedClient), detect natively via WebSocket JSON-RPC.
 func (c *WebSocketClient) Connect(ctx context.Context) error {
 	if err := c.config.Fallback.Connect(ctx); err != nil {
 		return err
 	}
-	c.version = c.config.Fallback.Version()
+
+	// Prefer fallback version when available (e.g. SSH client already detected it).
+	if v := c.config.Fallback.Version(); !v.IsZero() {
+		c.version = v
+		c.connected = true
+		return nil
+	}
+
+	// No fallback version — detect natively over WebSocket.
+	version, err := c.detectVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	c.version = version
 	c.connected = true
 	return nil
+}
+
+// detectVersion calls system.version via WebSocket JSON-RPC to detect the TrueNAS version.
+func (c *WebSocketClient) detectVersion(ctx context.Context) (truenas.Version, error) {
+	result, err := c.Call(ctx, "system.version", nil)
+	if err != nil {
+		return truenas.Version{}, fmt.Errorf("failed to detect TrueNAS version: %w", err)
+	}
+
+	// JSON-RPC returns a JSON string (e.g., "\"TrueNAS-25.04.2.4\"")
+	var raw string
+	if err := json.Unmarshal(result, &raw); err != nil {
+		return truenas.Version{}, fmt.Errorf("failed to parse version response: %w", err)
+	}
+
+	version, err := truenas.ParseVersion(strings.TrimSpace(raw))
+	if err != nil {
+		return truenas.Version{}, err
+	}
+
+	if !version.AtLeast(25, 0) {
+		return truenas.Version{}, fmt.Errorf("%w (detected version: %s)", ErrUnsupportedVersion, version.Raw)
+	}
+
+	return version, nil
 }
 
 // Version returns the cached TrueNAS version.
@@ -856,24 +901,40 @@ func (c *WebSocketClient) WriteFile(ctx context.Context, path string, params tru
 	return nil
 }
 
-// ReadFile delegates to fallback SSH client.
+// ReadFile delegates to fallback client (requires SSH).
 func (c *WebSocketClient) ReadFile(ctx context.Context, path string) ([]byte, error) {
-	return c.config.Fallback.ReadFile(ctx, path)
+	data, err := c.config.Fallback.ReadFile(ctx, path)
+	if errors.Is(err, ErrUnsupportedOperation) {
+		return nil, fmt.Errorf("ReadFile requires SSH fallback client: configure Fallback in WebSocketConfig: %w", err)
+	}
+	return data, err
 }
 
-// DeleteFile delegates to fallback SSH client.
+// DeleteFile delegates to fallback client (requires SSH).
 func (c *WebSocketClient) DeleteFile(ctx context.Context, path string) error {
-	return c.config.Fallback.DeleteFile(ctx, path)
+	err := c.config.Fallback.DeleteFile(ctx, path)
+	if errors.Is(err, ErrUnsupportedOperation) {
+		return fmt.Errorf("DeleteFile requires SSH fallback client: configure Fallback in WebSocketConfig: %w", err)
+	}
+	return err
 }
 
-// RemoveDir delegates to fallback SSH client.
+// RemoveDir delegates to fallback client (requires SSH).
 func (c *WebSocketClient) RemoveDir(ctx context.Context, path string) error {
-	return c.config.Fallback.RemoveDir(ctx, path)
+	err := c.config.Fallback.RemoveDir(ctx, path)
+	if errors.Is(err, ErrUnsupportedOperation) {
+		return fmt.Errorf("RemoveDir requires SSH fallback client: configure Fallback in WebSocketConfig: %w", err)
+	}
+	return err
 }
 
-// RemoveAll delegates to fallback SSH client.
+// RemoveAll delegates to fallback client (requires SSH).
 func (c *WebSocketClient) RemoveAll(ctx context.Context, path string) error {
-	return c.config.Fallback.RemoveAll(ctx, path)
+	err := c.config.Fallback.RemoveAll(ctx, path)
+	if errors.Is(err, ErrUnsupportedOperation) {
+		return fmt.Errorf("RemoveAll requires SSH fallback client: configure Fallback in WebSocketConfig: %w", err)
+	}
+	return err
 }
 
 // FileExists checks if a file exists using filesystem.stat.

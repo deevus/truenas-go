@@ -213,6 +213,43 @@ func TestVersion_String(t *testing.T) {
 	}
 }
 
+func TestVersion_IsZero(t *testing.T) {
+	tests := []struct {
+		name    string
+		version Version
+		want    bool
+	}{
+		{
+			name:    "zero value",
+			version: Version{},
+			want:    true,
+		},
+		{
+			name:    "parsed version",
+			version: Version{Major: 25, Minor: 4, Patch: 2, Build: 4, Raw: "TrueNAS-25.04.2.4"},
+			want:    false,
+		},
+		{
+			name:    "only Raw set",
+			version: Version{Raw: "something"},
+			want:    false,
+		},
+		{
+			name:    "only Major set",
+			version: Version{Major: 1},
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.version.IsZero(); got != tt.want {
+				t.Errorf("IsZero() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestVersion_Compare(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -93,6 +93,11 @@ func (v Version) AtLeast(major, minor int) bool {
 	return v.Minor >= minor
 }
 
+// IsZero reports whether v is the zero-value Version (unknown/undetected).
+func (v Version) IsZero() bool {
+	return v.Major == 0 && v.Minor == 0 && v.Patch == 0 && v.Build == 0 && v.Raw == ""
+}
+
 // String returns the version as "major.minor.patch.build".
 func (v Version) String() string {
 	return fmt.Sprintf("%d.%d.%d.%d", v.Major, v.Minor, v.Patch, v.Build)

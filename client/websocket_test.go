@@ -4579,3 +4579,195 @@ func TestCallAndWait_TransientNetworkDisconnect(t *testing.T) {
 		}
 	})
 }
+
+func TestNewWebSocketClient_DefaultsToUnsupportedFallback(t *testing.T) {
+	config := WebSocketConfig{
+		Host:     "localhost",
+		Port:     443,
+		Username: "root",
+		APIKey:   "test-key",
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v, want nil", err)
+	}
+	defer client.Close()
+
+	if _, ok := client.config.Fallback.(*UnsupportedClient); !ok {
+		t.Errorf("Fallback = %T, want *UnsupportedClient", client.config.Fallback)
+	}
+}
+
+func TestWebSocketClient_Connect_NativeVersionDetection(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		for {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+
+			var req JSONRPCRequest
+			if err := json.Unmarshal(msg, &req); err != nil {
+				return
+			}
+
+			switch req.Method {
+			case "auth.login_ex":
+				conn.WriteJSON(JSONRPCResponse{
+					JSONRPC: "2.0",
+					Result:  json.RawMessage(`{"response_type":"SUCCESS"}`),
+					ID:      req.ID,
+				})
+			case "core.subscribe":
+				conn.WriteJSON(JSONRPCResponse{
+					JSONRPC: "2.0",
+					Result:  json.RawMessage(`true`),
+					ID:      req.ID,
+				})
+			case "system.version":
+				conn.WriteJSON(JSONRPCResponse{
+					JSONRPC: "2.0",
+					Result:  json.RawMessage(`"TrueNAS-25.04.2.4"`),
+					ID:      req.ID,
+				})
+			default:
+				conn.WriteJSON(JSONRPCResponse{
+					JSONRPC: "2.0",
+					Result:  json.RawMessage(`"` + req.Method + `"`),
+					ID:      req.ID,
+				})
+			}
+		}
+	}))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	host := strings.TrimPrefix(wsURL, "ws://")
+
+	config := WebSocketConfig{
+		Host:           strings.Split(host, ":")[0],
+		Port:           mustParsePort(strings.Split(host, ":")[1]),
+		Username:       "root",
+		APIKey:         "test-key",
+		ConnectTimeout: 5 * time.Second,
+		MaxRetries:     1,
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v", err)
+	}
+	client.testInsecure = true
+	defer client.Close()
+
+	ctx := context.Background()
+	if err := client.Connect(ctx); err != nil {
+		t.Fatalf("Connect() error = %v", err)
+	}
+
+	v := client.Version()
+	if v.Major != 25 || v.Minor != 4 || v.Patch != 2 || v.Build != 4 {
+		t.Errorf("Version() = %v, want 25.4.2.4", v)
+	}
+}
+
+func TestWebSocketClient_UnsupportedFallback_ReadFile(t *testing.T) {
+	config := WebSocketConfig{
+		Host:     "localhost",
+		Port:     443,
+		Username: "root",
+		APIKey:   "test-key",
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v", err)
+	}
+	defer client.Close()
+
+	// Manually mark as connected to test ReadFile delegation
+	client.connected = true
+	client.version = truenas.Version{Major: 25, Minor: 0}
+
+	_, err = client.ReadFile(context.Background(), "/test")
+	if !errors.Is(err, ErrUnsupportedOperation) {
+		t.Errorf("ReadFile() error = %v, want ErrUnsupportedOperation", err)
+	}
+}
+
+func TestWebSocketClient_UnsupportedFallback_DeleteFile(t *testing.T) {
+	config := WebSocketConfig{
+		Host:     "localhost",
+		Port:     443,
+		Username: "root",
+		APIKey:   "test-key",
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v", err)
+	}
+	defer client.Close()
+
+	client.connected = true
+	client.version = truenas.Version{Major: 25, Minor: 0}
+
+	err = client.DeleteFile(context.Background(), "/test")
+	if !errors.Is(err, ErrUnsupportedOperation) {
+		t.Errorf("DeleteFile() error = %v, want ErrUnsupportedOperation", err)
+	}
+}
+
+func TestWebSocketClient_UnsupportedFallback_RemoveDir(t *testing.T) {
+	config := WebSocketConfig{
+		Host:     "localhost",
+		Port:     443,
+		Username: "root",
+		APIKey:   "test-key",
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v", err)
+	}
+	defer client.Close()
+
+	client.connected = true
+	client.version = truenas.Version{Major: 25, Minor: 0}
+
+	err = client.RemoveDir(context.Background(), "/test")
+	if !errors.Is(err, ErrUnsupportedOperation) {
+		t.Errorf("RemoveDir() error = %v, want ErrUnsupportedOperation", err)
+	}
+}
+
+func TestWebSocketClient_UnsupportedFallback_RemoveAll(t *testing.T) {
+	config := WebSocketConfig{
+		Host:     "localhost",
+		Port:     443,
+		Username: "root",
+		APIKey:   "test-key",
+	}
+
+	client, err := NewWebSocketClient(config)
+	if err != nil {
+		t.Fatalf("NewWebSocketClient() error = %v", err)
+	}
+	defer client.Close()
+
+	client.connected = true
+	client.version = truenas.Version{Major: 25, Minor: 0}
+
+	err = client.RemoveAll(context.Background(), "/test")
+	if !errors.Is(err, ErrUnsupportedOperation) {
+		t.Errorf("RemoveAll() error = %v, want ErrUnsupportedOperation", err)
+	}
+}
