@@ -98,6 +98,7 @@ type wsSubscription struct {
 // wsCollectionSub represents a request to subscribe/unsubscribe from a collection.
 type wsCollectionSub struct {
 	collection string
+	params     any
 	ch         chan<- json.RawMessage
 	unsub      bool
 }
@@ -213,6 +214,7 @@ func (c *WebSocketClient) Subscribe(ctx context.Context, collection string, para
 
 	sub := wsCollectionSub{
 		collection: collection,
+		params:     params,
 		ch:         ch,
 	}
 
@@ -260,7 +262,7 @@ func (c *WebSocketClient) writerLoop() {
 	var notifiedDisconnect bool // Track if we've notified subscribers of disconnect
 
 	// Collection subscription state (must be declared before handleDisconnect closure)
-	collectionSubs := make(map[string][]chan<- json.RawMessage) // collection -> subscriber channels
+	collectionSubs := make(map[string][]chan<- json.RawMessage) // collection (or collection:{params}) -> subscriber channels
 	activeCollections := make(map[string]bool)                  // collections we've sent core.subscribe for
 
 	// Ping/pong state
@@ -369,34 +371,43 @@ func (c *WebSocketClient) writerLoop() {
 
 		case colSub := <-c.collectionSubChan:
 			if colSub.unsub {
-				// Remove subscriber
-				subs := collectionSubs[colSub.collection]
-				for i, ch := range subs {
-					if ch == colSub.ch {
-						collectionSubs[colSub.collection] = append(subs[:i], subs[i+1:]...)
-						close(ch)
-						break
+				// Remove subscriber — search all keys matching this collection
+				// (could be exact match or parameterized "collection:{params}")
+				for key, subs := range collectionSubs {
+					for i, ch := range subs {
+						if ch == colSub.ch {
+							collectionSubs[key] = append(subs[:i], subs[i+1:]...)
+							close(ch)
+							break
+						}
 					}
 				}
 			} else {
-				collectionSubs[colSub.collection] = append(collectionSubs[colSub.collection], colSub.ch)
+				// Build the subscribe name: for parameterized event sources,
+				// TrueNAS expects "collection:{json params}" as a single argument.
+				subName := colSub.collection
+				if colSub.params != nil {
+					paramJSON, _ := json.Marshal(colSub.params)
+					subName = colSub.collection + ":" + string(paramJSON)
+				}
+				collectionSubs[subName] = append(collectionSubs[subName], colSub.ch)
 				// Subscribe on server if connection exists and not already subscribed
-				if conn != nil && !activeCollections[colSub.collection] {
+				if conn != nil && !activeCollections[subName] {
 					subReq := JSONRPCRequest{
 						JSONRPC: "2.0",
 						Method:  "core.subscribe",
-						Params:  []any{colSub.collection},
+						Params:  []any{subName},
 						ID:      fmt.Sprintf("col-sub-%d", nextID),
 					}
 					nextID++
 					if err := conn.WriteJSON(subReq); err != nil {
 						// Failed — remove and close the subscriber
-						subs := collectionSubs[colSub.collection]
-						collectionSubs[colSub.collection] = subs[:len(subs)-1]
+						subs := collectionSubs[subName]
+						collectionSubs[subName] = subs[:len(subs)-1]
 						close(colSub.ch)
 						continue
 					}
-					activeCollections[colSub.collection] = true
+					activeCollections[subName] = true
 				}
 			}
 
@@ -441,17 +452,29 @@ func (c *WebSocketClient) writerLoop() {
 						Fields     json.RawMessage `json:"fields"`
 					} `json:"params"`
 				}
-				if json.Unmarshal(msg.Result, &envelope) == nil && envelope.Method == "collection_update" {
+				if err := json.Unmarshal(msg.Result, &envelope); err == nil && envelope.Method == "collection_update" {
 					if envelope.Params.Collection != "core.get_jobs" {
-						// Route to collection subscribers
+						// Route to collection subscribers.
+						// Check exact match first, then parameterized keys (collection:{params}).
+						var allSubs []chan<- json.RawMessage
 						if subs, ok := collectionSubs[envelope.Params.Collection]; ok {
-							for _, ch := range subs {
-								select {
-								case ch <- envelope.Params.Fields:
-								default:
-									// Channel full, skip to avoid blocking writer loop
-								}
+							allSubs = append(allSubs, subs...)
+						}
+						prefix := envelope.Params.Collection + ":"
+						for key, subs := range collectionSubs {
+							if strings.HasPrefix(key, prefix) {
+								allSubs = append(allSubs, subs...)
 							}
+						}
+						for _, ch := range allSubs {
+							select {
+							case ch <- envelope.Params.Fields:
+							default:
+								// Channel full, skip to avoid blocking writer loop
+							}
+						}
+						if len(allSubs) > 0 {
+							continue
 						}
 						continue
 					}
