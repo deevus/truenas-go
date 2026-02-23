@@ -8,10 +8,37 @@ import (
 
 // App is the user-facing representation of a TrueNAS app.
 type App struct {
-	Name      string
-	State     string
-	CustomApp bool
-	Config    map[string]any
+	Name             string
+	State            string
+	CustomApp        bool
+	Config           map[string]any
+	Version          string
+	HumanVersion     string
+	LatestVersion    string
+	UpgradeAvailable bool
+	ActiveWorkloads  AppActiveWorkloads
+}
+
+// AppActiveWorkloads contains active workload information for an app.
+type AppActiveWorkloads struct {
+	Containers       int
+	UsedPorts        []AppUsedPort
+	ContainerDetails []AppContainerDetails
+}
+
+// AppUsedPort represents a port mapping for an app.
+type AppUsedPort struct {
+	ContainerPort int
+	HostPort      int
+	Protocol      string
+}
+
+// AppContainerDetails represents details of a container within an app.
+type AppContainerDetails struct {
+	ID          string
+	ServiceName string
+	Image       string
+	State       ContainerState
 }
 
 // CreateAppOpts contains options for creating an app.
@@ -303,11 +330,39 @@ func registryParams(opts CreateRegistryOpts) map[string]any {
 
 // appFromResponse converts a wire-format AppResponse to a user-facing App.
 func appFromResponse(resp AppResponse) App {
+	ports := make([]AppUsedPort, len(resp.ActiveWorkloads.UsedPorts))
+	for i, p := range resp.ActiveWorkloads.UsedPorts {
+		ports[i] = AppUsedPort{
+			ContainerPort: p.ContainerPort,
+			HostPort:      p.HostPort,
+			Protocol:      p.Protocol,
+		}
+	}
+
+	containers := make([]AppContainerDetails, len(resp.ActiveWorkloads.ContainerDetails))
+	for i, c := range resp.ActiveWorkloads.ContainerDetails {
+		containers[i] = AppContainerDetails{
+			ID:          c.ID,
+			ServiceName: c.ServiceName,
+			Image:       c.Image,
+			State:       ContainerState(c.State),
+		}
+	}
+
 	return App{
-		Name:      resp.Name,
-		State:     resp.State,
-		CustomApp: resp.CustomApp,
-		Config:    resp.Config,
+		Name:             resp.Name,
+		State:            resp.State,
+		CustomApp:        resp.CustomApp,
+		Config:           resp.Config,
+		Version:          resp.Version,
+		HumanVersion:     resp.HumanVersion,
+		LatestVersion:    resp.LatestVersion,
+		UpgradeAvailable: resp.UpgradeAvailable,
+		ActiveWorkloads: AppActiveWorkloads{
+			Containers:       resp.ActiveWorkloads.Containers,
+			UsedPorts:        ports,
+			ContainerDetails: containers,
+		},
 	}
 }
 

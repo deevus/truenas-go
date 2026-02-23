@@ -1076,6 +1076,63 @@ func TestAppFromResponse_NilConfig(t *testing.T) {
 	}
 }
 
+func TestAppFromResponse_WithWorkloads(t *testing.T) {
+	resp := AppResponse{
+		Name:             "plex",
+		State:            "RUNNING",
+		Version:          "1.0.0",
+		HumanVersion:     "Plex 1.0.0",
+		LatestVersion:    "1.1.0",
+		UpgradeAvailable: true,
+		ActiveWorkloads: AppActiveWorkloadsResponse{
+			Containers: 2,
+			UsedPorts: []AppUsedPortResponse{
+				{ContainerPort: 32400, HostPort: 32400, Protocol: "tcp"},
+			},
+			ContainerDetails: []AppContainerDetailsResponse{
+				{
+					ID:          "abc123",
+					ServiceName: "plex",
+					Image:       "plexinc/pms-docker:latest",
+					State:       "running",
+				},
+			},
+		},
+	}
+
+	app := appFromResponse(resp)
+	if app.Version != "1.0.0" {
+		t.Errorf("expected version 1.0.0, got %s", app.Version)
+	}
+	if app.HumanVersion != "Plex 1.0.0" {
+		t.Errorf("expected human version 'Plex 1.0.0', got %s", app.HumanVersion)
+	}
+	if app.LatestVersion != "1.1.0" {
+		t.Errorf("expected latest version 1.1.0, got %s", app.LatestVersion)
+	}
+	if !app.UpgradeAvailable {
+		t.Error("expected UpgradeAvailable=true")
+	}
+	if app.ActiveWorkloads.Containers != 2 {
+		t.Errorf("expected 2 containers, got %d", app.ActiveWorkloads.Containers)
+	}
+	if len(app.ActiveWorkloads.UsedPorts) != 1 {
+		t.Fatalf("expected 1 used port, got %d", len(app.ActiveWorkloads.UsedPorts))
+	}
+	if app.ActiveWorkloads.UsedPorts[0].ContainerPort != 32400 {
+		t.Errorf("expected container port 32400, got %d", app.ActiveWorkloads.UsedPorts[0].ContainerPort)
+	}
+	if len(app.ActiveWorkloads.ContainerDetails) != 1 {
+		t.Fatalf("expected 1 container detail, got %d", len(app.ActiveWorkloads.ContainerDetails))
+	}
+	if app.ActiveWorkloads.ContainerDetails[0].State != ContainerStateRunning {
+		t.Errorf("expected running state, got %s", app.ActiveWorkloads.ContainerDetails[0].State)
+	}
+	if app.ActiveWorkloads.ContainerDetails[0].Image != "plexinc/pms-docker:latest" {
+		t.Errorf("expected image plexinc/pms-docker:latest, got %s", app.ActiveWorkloads.ContainerDetails[0].Image)
+	}
+}
+
 func TestRegistryFromResponse(t *testing.T) {
 	desc := "A registry"
 	resp := AppRegistryResponse{
