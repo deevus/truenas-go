@@ -1434,7 +1434,10 @@ func TestAppService_UpgradeSummary(t *testing.T) {
 			"upgrade_version": "1.1.0",
 			"upgrade_human_version": "Plex 1.1.0",
 			"changelog": "Bug fixes and improvements",
-			"available_versions_for_upgrade": ["1.1.0", "1.2.0"]
+			"available_versions_for_upgrade": [
+				{"version": "1.1.0", "human_version": "Plex 1.1.0"},
+				{"version": "1.2.0", "human_version": "Plex 1.2.0"}
+			]
 		}`), nil
 	}
 
@@ -1464,11 +1467,11 @@ func TestAppService_UpgradeSummary(t *testing.T) {
 	if len(summary.AvailableVersions) != 2 {
 		t.Fatalf("expected 2 available versions, got %d", len(summary.AvailableVersions))
 	}
-	if summary.AvailableVersions[0] != "1.1.0" {
-		t.Errorf("expected first version 1.1.0, got %s", summary.AvailableVersions[0])
+	if summary.AvailableVersions[0].Version != "1.1.0" {
+		t.Errorf("expected first version 1.1.0, got %s", summary.AvailableVersions[0].Version)
 	}
-	if summary.AvailableVersions[1] != "1.2.0" {
-		t.Errorf("expected second version 1.2.0, got %s", summary.AvailableVersions[1])
+	if summary.AvailableVersions[1].Version != "1.2.0" {
+		t.Errorf("expected second version 1.2.0, got %s", summary.AvailableVersions[1].Version)
 	}
 }
 
@@ -1706,13 +1709,17 @@ func TestAppService_RedeployApp_Error(t *testing.T) {
 // --- Conversion function tests ---
 
 func TestAppUpgradeSummaryFromResponse(t *testing.T) {
+	changelog := "Major update"
 	resp := AppUpgradeSummaryResponse{
 		LatestVersion:       "2.0.0",
 		LatestHumanVersion:  "App 2.0.0",
 		UpgradeVersion:      "1.5.0",
 		UpgradeHumanVersion: "App 1.5.0",
-		Changelog:           "Major update",
-		AvailableVersions:   []string{"1.5.0", "2.0.0"},
+		Changelog:           &changelog,
+		AvailableVersions: []AppAvailableVersionResponse{
+			{Version: "1.5.0", HumanVersion: "App 1.5.0"},
+			{Version: "2.0.0", HumanVersion: "App 2.0.0"},
+		},
 	}
 
 	summary := appUpgradeSummaryFromResponse(resp)
@@ -1734,6 +1741,25 @@ func TestAppUpgradeSummaryFromResponse(t *testing.T) {
 	}
 	if len(summary.AvailableVersions) != 2 {
 		t.Fatalf("expected 2 versions, got %d", len(summary.AvailableVersions))
+	}
+	if summary.AvailableVersions[0].Version != "1.5.0" {
+		t.Errorf("expected first version 1.5.0, got %s", summary.AvailableVersions[0].Version)
+	}
+}
+
+func TestAppUpgradeSummaryFromResponse_NilChangelog(t *testing.T) {
+	resp := AppUpgradeSummaryResponse{
+		LatestVersion:       "2.0.0",
+		LatestHumanVersion:  "App 2.0.0",
+		UpgradeVersion:      "1.5.0",
+		UpgradeHumanVersion: "App 1.5.0",
+		Changelog:           nil,
+		AvailableVersions:   []AppAvailableVersionResponse{},
+	}
+
+	summary := appUpgradeSummaryFromResponse(resp)
+	if summary.Changelog != "" {
+		t.Errorf("expected empty changelog for nil, got %q", summary.Changelog)
 	}
 }
 

@@ -10,14 +10,10 @@ import (
 func TestAppService_SubscribeStats(t *testing.T) {
 	eventData := json.RawMessage(`[{
 		"app_name": "plex",
-		"containers": [{
-			"id": "abc123",
-			"cpu_usage": 25.5,
-			"mem_usage": 536870912,
-			"networks": {
-				"eth0": {"rx_bytes": 1024, "tx_bytes": 2048}
-			}
-		}]
+		"memory": 536870912,
+		"cpu_usage": 25.5,
+		"blkio": {"read": 1024, "write": 2048},
+		"networks": [{"interface_name": "eth0", "rx_bytes": 1024, "tx_bytes": 2048}]
 	}]`)
 
 	ch := make(chan json.RawMessage, 1)
@@ -49,17 +45,14 @@ func TestAppService_SubscribeStats(t *testing.T) {
 	if stats[0].AppName != "plex" {
 		t.Errorf("expected app name plex, got %s", stats[0].AppName)
 	}
-	if len(stats[0].Containers) != 1 {
-		t.Fatalf("expected 1 container, got %d", len(stats[0].Containers))
+	if stats[0].CPUUsage != 25.5 {
+		t.Errorf("expected CPU usage 25.5, got %f", stats[0].CPUUsage)
 	}
-	if stats[0].Containers[0].CPUUsage != 25.5 {
-		t.Errorf("expected CPU usage 25.5, got %f", stats[0].Containers[0].CPUUsage)
+	if stats[0].Memory != 536870912 {
+		t.Errorf("expected memory 536870912, got %d", stats[0].Memory)
 	}
-	if stats[0].Containers[0].MemUsage != 536870912 {
-		t.Errorf("expected mem usage 536870912, got %d", stats[0].Containers[0].MemUsage)
-	}
-	if stats[0].Containers[0].Networks["eth0"].RxBytes != 1024 {
-		t.Errorf("expected rx_bytes 1024, got %d", stats[0].Containers[0].Networks["eth0"].RxBytes)
+	if len(stats[0].Networks) != 1 || stats[0].Networks[0].RxBytes != 1024 {
+		t.Errorf("expected rx_bytes 1024, got %v", stats[0].Networks)
 	}
 }
 
@@ -80,7 +73,7 @@ func TestAppService_SubscribeStats_Error(t *testing.T) {
 func TestAppService_SubscribeStats_MalformedEvent(t *testing.T) {
 	ch := make(chan json.RawMessage, 2)
 	ch <- json.RawMessage(`not json`)
-	ch <- json.RawMessage(`[{"app_name": "valid", "containers": []}]`)
+	ch <- json.RawMessage(`[{"app_name": "valid", "memory": 0, "cpu_usage": 0, "blkio": {"read": 0, "write": 0}, "networks": []}]`)
 
 	mock := &mockSubscribeCaller{
 		subscribeFunc: func(ctx context.Context, collection string, params any) (*Subscription[json.RawMessage], error) {
@@ -111,7 +104,7 @@ func TestAppService_SubscribeStats_MalformedEvent(t *testing.T) {
 func TestAppService_SubscribeContainerLogs(t *testing.T) {
 	eventData := json.RawMessage(`{
 		"timestamp": "2025-01-15T10:30:00Z",
-		"message": "Server started on port 8080"
+		"data": "Server started on port 8080"
 	}`)
 
 	ch := make(chan json.RawMessage, 1)

@@ -82,7 +82,13 @@ type AppUpgradeSummary struct {
 	UpgradeVersion      string
 	UpgradeHumanVersion string
 	Changelog           string
-	AvailableVersions   []string
+	AvailableVersions   []AppAvailableVersion
+}
+
+// AppAvailableVersion represents a version available for upgrade.
+type AppAvailableVersion struct {
+	Version      string
+	HumanVersion string
 }
 
 // AppImage is the user-facing representation of a container image.
@@ -96,22 +102,19 @@ type AppImage struct {
 
 // AppStats represents stats for an app.
 type AppStats struct {
-	AppName    string
-	Containers []AppContainerStats
-}
-
-// AppContainerStats represents per-container resource usage.
-type AppContainerStats struct {
-	ID       string
+	AppName  string
+	Memory   int64
 	CPUUsage float64
-	MemUsage int64
-	Networks map[string]AppContainerNetworkStats
+	BlkioRead  int64
+	BlkioWrite int64
+	Networks []AppNetworkStats
 }
 
-// AppContainerNetworkStats represents per-interface network stats for a container.
-type AppContainerNetworkStats struct {
-	RxBytes int64
-	TxBytes int64
+// AppNetworkStats represents per-interface network stats for an app.
+type AppNetworkStats struct {
+	InterfaceName string
+	RxBytes       int64
+	TxBytes       int64
 }
 
 // AppContainerLogEntry represents a log line from a container.
@@ -465,25 +468,21 @@ func (s *AppService) SubscribeContainerLogs(ctx context.Context, opts ContainerL
 }
 
 func appStatsFromResponse(resp AppStatsResponse) AppStats {
-	containers := make([]AppContainerStats, len(resp.Containers))
-	for i, c := range resp.Containers {
-		networks := make(map[string]AppContainerNetworkStats, len(c.Networks))
-		for k, v := range c.Networks {
-			networks[k] = AppContainerNetworkStats{
-				RxBytes: v.RxBytes,
-				TxBytes: v.TxBytes,
-			}
-		}
-		containers[i] = AppContainerStats{
-			ID:       c.ID,
-			CPUUsage: c.CPUUsage,
-			MemUsage: c.MemUsage,
-			Networks: networks,
+	networks := make([]AppNetworkStats, len(resp.Networks))
+	for i, n := range resp.Networks {
+		networks[i] = AppNetworkStats{
+			InterfaceName: n.InterfaceName,
+			RxBytes:       n.RxBytes,
+			TxBytes:       n.TxBytes,
 		}
 	}
 	return AppStats{
 		AppName:    resp.AppName,
-		Containers: containers,
+		Memory:     resp.Memory,
+		CPUUsage:   resp.CPUUsage,
+		BlkioRead:  resp.Blkio.Read,
+		BlkioWrite: resp.Blkio.Write,
+		Networks:   networks,
 	}
 }
 
@@ -496,13 +495,24 @@ func appContainerLogFromResponse(resp AppContainerLogEntryResponse) AppContainer
 
 // appUpgradeSummaryFromResponse converts a wire-format AppUpgradeSummaryResponse to a user-facing AppUpgradeSummary.
 func appUpgradeSummaryFromResponse(resp AppUpgradeSummaryResponse) AppUpgradeSummary {
+	changelog := ""
+	if resp.Changelog != nil {
+		changelog = *resp.Changelog
+	}
+	versions := make([]AppAvailableVersion, len(resp.AvailableVersions))
+	for i, v := range resp.AvailableVersions {
+		versions[i] = AppAvailableVersion{
+			Version:      v.Version,
+			HumanVersion: v.HumanVersion,
+		}
+	}
 	return AppUpgradeSummary{
 		LatestVersion:       resp.LatestVersion,
 		LatestHumanVersion:  resp.LatestHumanVersion,
 		UpgradeVersion:      resp.UpgradeVersion,
 		UpgradeHumanVersion: resp.UpgradeHumanVersion,
-		Changelog:           resp.Changelog,
-		AvailableVersions:   resp.AvailableVersions,
+		Changelog:           changelog,
+		AvailableVersions:   versions,
 	}
 }
 
