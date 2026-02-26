@@ -21,6 +21,11 @@ func TestMockCronService_DefaultsToNil(t *testing.T) {
 	if job != nil {
 		t.Fatalf("expected nil result, got: %v", job)
 	}
+
+	err = mock.Run(ctx, 1, false)
+	if err != nil {
+		t.Fatalf("expected nil error from Run, got: %v", err)
+	}
 }
 
 func TestMockCronService_CallsFunc(t *testing.T) {

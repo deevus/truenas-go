@@ -46,12 +46,12 @@ type UpdateCronJobOpts = CreateCronJobOpts
 
 // CronService provides typed methods for the cronjob.* API namespace.
 type CronService struct {
-	client  Caller
+	client  AsyncCaller
 	version Version
 }
 
 // NewCronService creates a new CronService.
-func NewCronService(c Caller, v Version) *CronService {
+func NewCronService(c AsyncCaller, v Version) *CronService {
 	return &CronService{client: c, version: v}
 }
 
@@ -75,22 +75,20 @@ func (s *CronService) Create(ctx context.Context, opts CreateCronJobOpts) (*Cron
 
 // Get returns a cron job by ID, or nil if not found.
 func (s *CronService) Get(ctx context.Context, id int64) (*CronJob, error) {
-	filter := [][]any{{"id", "=", id}}
-	result, err := s.client.Call(ctx, "cronjob.query", filter)
+	result, err := s.client.Call(ctx, "cronjob.get_instance", id)
 	if err != nil {
+		if isNotFoundError(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	var jobs []CronJobResponse
-	if err := json.Unmarshal(result, &jobs); err != nil {
-		return nil, fmt.Errorf("parse query response: %w", err)
+	var resp CronJobResponse
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, fmt.Errorf("parse get_instance response: %w", err)
 	}
 
-	if len(jobs) == 0 {
-		return nil, nil
-	}
-
-	job := cronJobFromResponse(jobs[0])
+	job := cronJobFromResponse(resp)
 	return &job, nil
 }
 
@@ -127,6 +125,13 @@ func (s *CronService) Update(ctx context.Context, id int64, opts UpdateCronJobOp
 // Delete deletes a cron job by ID.
 func (s *CronService) Delete(ctx context.Context, id int64) error {
 	_, err := s.client.Call(ctx, "cronjob.delete", id)
+	return err
+}
+
+// Run triggers a cron job and waits for it to complete. When skipDisabled
+// is true, disabled jobs are skipped instead of being run.
+func (s *CronService) Run(ctx context.Context, id int64, skipDisabled bool) error {
+	_, err := s.client.CallAndWait(ctx, "cronjob.run", []any{id, skipDisabled})
 	return err
 }
 

@@ -9,6 +9,7 @@ type CronServiceAPI interface {
 	List(ctx context.Context) ([]CronJob, error)
 	Update(ctx context.Context, id int64, opts UpdateCronJobOpts) (*CronJob, error)
 	Delete(ctx context.Context, id int64) error
+	Run(ctx context.Context, id int64, skipDisabled bool) error
 }
 
 // Compile-time checks.
@@ -22,6 +23,7 @@ type MockCronService struct {
 	ListFunc   func(ctx context.Context) ([]CronJob, error)
 	UpdateFunc func(ctx context.Context, id int64, opts UpdateCronJobOpts) (*CronJob, error)
 	DeleteFunc func(ctx context.Context, id int64) error
+	RunFunc    func(ctx context.Context, id int64, skipDisabled bool) error
 }
 
 func (m *MockCronService) Create(ctx context.Context, opts CreateCronJobOpts) (*CronJob, error) {
@@ -55,6 +57,13 @@ func (m *MockCronService) Update(ctx context.Context, id int64, opts UpdateCronJ
 func (m *MockCronService) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockCronService) Run(ctx context.Context, id int64, skipDisabled bool) error {
+	if m.RunFunc != nil {
+		return m.RunFunc(ctx, id, skipDisabled)
 	}
 	return nil
 }

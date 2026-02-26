@@ -2,7 +2,7 @@
 
 TrueNAS version: 25.04
 
-Total API methods: 771 | Implemented: 72 (9.3%) | Tested: 72 (100.0% of implemented)
+Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemented)
 
 ## Covered Namespaces
 
@@ -10,7 +10,7 @@ Total API methods: 771 | Implemented: 72 (9.3%) | Tested: 72 (100.0% of implemen
 |------------|------------|:-----------:|:-----------:|:------:|
 | AppService | app, app.image, app.registry | 38 | 15 (39%) | 15 (100%) |
 | CloudSyncService | cloudsync, cloudsync.credentials | 20 | 9 (45%) | 9 (100%) |
-| CronService | cronjob | 6 | 4 (67%) | 4 (100%) |
+| CronService | cronjob | 6 | 6 (100%) | 6 (100%) |
 | DatasetService | pool, pool.dataset | 50 | 5 (10%) | 5 (100%) |
 | DockerService | docker | 8 | 2 (25%) | 2 (100%) |
 | FilesystemService | filesystem | 13 | 2 (15%) | 2 (100%) |
@@ -111,9 +111,9 @@ Total API methods: 771 | Implemented: 72 (9.3%) | Tested: 72 (100.0% of implemen
 |------------|:-----------:|-----------|:------:|------:|
 | cronjob.create | ✓ | Create | ✓ | 3 |
 | cronjob.delete | ✓ | Delete | ✓ | 2 |
-| cronjob.get_instance |  |  |  |  |
-| cronjob.query | ✓ | Get, List | ✓ | 6 |
-| cronjob.run |  |  |  |  |
+| cronjob.get_instance | ✓ | Get | ✓ | 3 |
+| cronjob.query | ✓ | List | ✓ | 3 |
+| cronjob.run | ✓ | Run | ✓ | 3 |
 | cronjob.update | ✓ | Update | ✓ | 2 |
 
 ### DatasetService — `pool` (24 methods)
