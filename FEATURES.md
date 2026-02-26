@@ -2,7 +2,7 @@
 
 TrueNAS version: 25.04
 
-Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemented)
+Total API methods: 771 | Implemented: 72 (9.3%) | Tested: 72 (100.0% of implemented)
 
 ## Covered Namespaces
 
@@ -15,11 +15,12 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | DockerService | docker | 8 | 2 (25%) | 2 (100%) |
 | FilesystemService | filesystem | 13 | 2 (15%) | 2 (100%) |
 | InterfaceService | interface | 23 | 1 (4%) | 1 (100%) |
+| NetworkService | network.general | 1 | 1 (100%) | 1 (100%) |
 | ReportingService | reporting | 8 | 2 (25%) | 2 (100%) |
-| SnapshotService | zfs.snapshot | 9 | 6 (67%) | 6 (100%) |
+| SnapshotService | zfs.snapshot | 9 | 7 (78%) | 7 (100%) |
 | SystemService | system | 14 | 2 (14%) | 2 (100%) |
 | VMService | vm, vm.device | 51 | 10 (20%) | 10 (100%) |
-| VirtService | virt.global, virt.instance | 18 | 11 (61%) | 11 (100%) |
+| VirtService | virt.global, virt.instance | 18 | 12 (67%) | 12 (100%) |
 
 ### AppService — `app` (28 methods)
 
@@ -234,6 +235,12 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | interface.websocket_local_ip |  |  |  |  |
 | interface.xmit_hash_policy_choices |  |  |  |  |
 
+### NetworkService — `network.general` (1 methods)
+
+| API Method | Implemented | Go Method | Tested | Tests |
+|------------|:-----------:|-----------|:------:|------:|
+| network.general.summary | ✓ | GetSummary | ✓ | 5 |
+
 ### ReportingService — `reporting` (8 methods)
 
 | API Method | Implemented | Go Method | Tested | Tests |
@@ -256,9 +263,9 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | zfs.snapshot.delete | ✓ | Delete | ✓ | 2 |
 | zfs.snapshot.get_instance |  |  |  |  |
 | zfs.snapshot.hold | ✓ | Hold | ✓ | 2 |
-| zfs.snapshot.query | ✓ | Get, List | ✓ | 9 |
+| zfs.snapshot.query | ✓ | Get, List, Query | ✓ | 15 |
 | zfs.snapshot.release | ✓ | Release | ✓ | 2 |
-| zfs.snapshot.rollback |  |  |  |  |
+| zfs.snapshot.rollback | ✓ | Rollback | ✓ | 3 |
 | zfs.snapshot.update |  |  |  |  |
 
 ### SystemService — `system` (14 methods)
@@ -346,7 +353,7 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
 | virt.global.bridge_choices |  |  |  |  |
-| virt.global.config | ✓ | GetGlobalConfig | ✓ | 4 |
+| virt.global.config | ✓ | GetGlobalConfig | ✓ | 6 |
 | virt.global.get_network |  |  |  |  |
 | virt.global.pool_choices |  |  |  |  |
 | virt.global.update | ✓ | UpdateGlobalConfig | ✓ | 3 |
@@ -363,13 +370,13 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | virt.instance.device_update |  |  |  |  |
 | virt.instance.get_instance | ✓ | GetInstance | ✓ | 4 |
 | virt.instance.image_choices |  |  |  |  |
-| virt.instance.query |  |  |  |  |
+| virt.instance.query | ✓ | ListInstances | ✓ | 5 |
 | virt.instance.restart |  |  |  |  |
 | virt.instance.start | ✓ | StartInstance | ✓ | 2 |
 | virt.instance.stop | ✓ | StopInstance | ✓ | 3 |
 | virt.instance.update | ✓ | UpdateInstance | ✓ | 3 |
 
-## Uncovered Namespaces (96 namespaces, 513 methods)
+## Uncovered Namespaces (95 namespaces, 512 methods)
 
 | Namespace | Methods |
 |-----------|--------:|
@@ -430,7 +437,6 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | ldap | 4 |
 | mail | 4 |
 | network.configuration | 3 |
-| network.general | 1 |
 | nfs | 6 |
 | pool.resilver | 2 |
 | pool.scrub | 7 |
@@ -470,7 +476,7 @@ Total API methods: 771 | Implemented: 69 (8.9%) | Tested: 69 (100.0% of implemen
 | virt.volume | 7 |
 | vmware | 8 |
 
-## Go Methods Not in API Schema (10 methods)
+## Go Methods Not in API Schema (13 methods)
 
 These Go methods call API endpoints not present in the 25.04 method schema
 (e.g., subscription/event channels, version-specific aliases).
@@ -479,12 +485,15 @@ These Go methods call API endpoints not present in the 25.04 method schema
 |------------|-----------|------------|
 | AppService | SubscribeContainerLogs | app.container_log_follow |
 | AppService | SubscribeStats | app.stats |
+| FilesystemService | WriteFile | filesystem.file_receive |
 | ReportingService | SubscribeRealtime | reporting.realtime |
 | SnapshotService | Clone | pool.snapshot.clone |
 | SnapshotService | Create | pool.snapshot.create |
 | SnapshotService | Delete | pool.snapshot.delete |
 | SnapshotService | Hold | pool.snapshot.hold |
-| SnapshotService | Get | pool.snapshot.query |
 | SnapshotService | List | pool.snapshot.query |
+| SnapshotService | Query | pool.snapshot.query |
+| SnapshotService | Get | pool.snapshot.query |
 | SnapshotService | Release | pool.snapshot.release |
+| SnapshotService | Rollback | pool.snapshot.rollback |
 
