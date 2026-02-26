@@ -17,3 +17,4 @@ coverage.out
 coverage.html
 coverage*.out
 /featurematrix
+.claude
