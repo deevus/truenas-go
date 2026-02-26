@@ -15,6 +15,101 @@ func sampleFileStatJSON() json.RawMessage {
 	return json.RawMessage(`{"mode": 33188, "uid": 0, "gid": 0}`)
 }
 
+func TestFilesystemService_WriteFile(t *testing.T) {
+	mock := &mockFileCaller{
+		mockAsyncCaller: mockAsyncCaller{
+			mockCaller: mockCaller{
+				callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+					if method != "filesystem.file_receive" {
+						t.Errorf("expected method filesystem.file_receive, got %s", method)
+					}
+					args := params.([]any)
+					if args[0] != "/mnt/pool/test.txt" {
+						t.Errorf("expected path /mnt/pool/test.txt, got %v", args[0])
+					}
+					// Content should be base64-encoded "hello"
+					if args[1] != "aGVsbG8=" {
+						t.Errorf("expected base64 'aGVsbG8=', got %v", args[1])
+					}
+					opts := args[2].(map[string]any)
+					if opts["mode"] != int(0o644) {
+						t.Errorf("expected mode %d, got %v", int(0o644), opts["mode"])
+					}
+					if opts["uid"] != -1 {
+						t.Errorf("expected uid -1 (unset), got %v", opts["uid"])
+					}
+					if opts["gid"] != -1 {
+						t.Errorf("expected gid -1 (unset), got %v", opts["gid"])
+					}
+					return nil, nil
+				},
+			},
+		},
+	}
+
+	svc := NewFilesystemService(mock, Version{})
+	err := svc.WriteFile(context.Background(), "/mnt/pool/test.txt", WriteFileParams{
+		Content: []byte("hello"),
+		Mode:    0o644,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestFilesystemService_WriteFile_WithUID(t *testing.T) {
+	mock := &mockFileCaller{
+		mockAsyncCaller: mockAsyncCaller{
+			mockCaller: mockCaller{
+				callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+					args := params.([]any)
+					opts := args[2].(map[string]any)
+					if opts["uid"] != 1000 {
+						t.Errorf("expected uid 1000, got %v", opts["uid"])
+					}
+					if opts["gid"] != 1000 {
+						t.Errorf("expected gid 1000, got %v", opts["gid"])
+					}
+					return nil, nil
+				},
+			},
+		},
+	}
+
+	svc := NewFilesystemService(mock, Version{})
+	uid, gid := 1000, 1000
+	err := svc.WriteFile(context.Background(), "/mnt/pool/test.txt", WriteFileParams{
+		Content: []byte("hello"),
+		Mode:    0o644,
+		UID:     &uid,
+		GID:     &gid,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestFilesystemService_WriteFile_Error(t *testing.T) {
+	mock := &mockFileCaller{
+		mockAsyncCaller: mockAsyncCaller{
+			mockCaller: mockCaller{
+				callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+					return nil, errors.New("permission denied")
+				},
+			},
+		},
+	}
+
+	svc := NewFilesystemService(mock, Version{})
+	err := svc.WriteFile(context.Background(), "/mnt/pool/test.txt", WriteFileParams{
+		Content: []byte("hello"),
+		Mode:    0o644,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestFilesystemService_Stat(t *testing.T) {
 	mock := &mockFileCaller{
 		mockAsyncCaller: mockAsyncCaller{

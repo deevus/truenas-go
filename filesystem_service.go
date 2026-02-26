@@ -2,6 +2,7 @@ package truenas
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 )
@@ -39,6 +40,36 @@ func NewFilesystemService(c FileCaller, v Version) *FilesystemService {
 // Client returns the underlying FileCaller.
 func (s *FilesystemService) Client() FileCaller {
 	return s.client
+}
+
+// WriteFile writes content to a file on the remote system via filesystem.file_receive.
+func (s *FilesystemService) WriteFile(ctx context.Context, path string, params WriteFileParams) error {
+	b64Content := base64.StdEncoding.EncodeToString(params.Content)
+
+	uid := -1
+	if params.UID != nil {
+		uid = *params.UID
+	}
+	gid := -1
+	if params.GID != nil {
+		gid = *params.GID
+	}
+
+	apiParams := []any{
+		path,
+		b64Content,
+		map[string]any{
+			"mode": int(params.Mode),
+			"uid":  uid,
+			"gid":  gid,
+		},
+	}
+
+	_, err := s.client.Call(ctx, "filesystem.file_receive", apiParams)
+	if err != nil {
+		return fmt.Errorf("write file %q: %w", path, err)
+	}
+	return nil
 }
 
 // Stat returns filesystem stat information for the given path.

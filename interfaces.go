@@ -22,6 +22,7 @@ type AsyncCaller interface {
 // Embeds AsyncCaller because filesystem.setperm is job-based.
 type FileCaller interface {
 	AsyncCaller
+	// Deprecated: Use FilesystemService.WriteFile instead.
 	WriteFile(ctx context.Context, path string, params WriteFileParams) error
 	ReadFile(ctx context.Context, path string) ([]byte, error)
 	DeleteFile(ctx context.Context, path string) error
