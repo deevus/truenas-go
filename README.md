@@ -97,6 +97,10 @@ Without a fallback, these operations return `client.ErrUnsupportedOperation`.
 | VMs | `VMServiceAPI` | `NewVMService(AsyncCaller, Version)` |
 | Virt (Containers) | `VirtServiceAPI` | `NewVirtService(AsyncCaller, Version)` |
 
+For the full per-method breakdown of which API endpoints are implemented and tested, see the [Feature Matrix](FEATURES.md). The library currently targets the latest stable release, **TrueNAS 25.04**.
+
+To regenerate the feature matrix: `go run ./cmd/featurematrix -o FEATURES.md`
+
 ## Testing
 
 Every service interface has a corresponding mock:
