@@ -75,22 +75,20 @@ func (s *CronService) Create(ctx context.Context, opts CreateCronJobOpts) (*Cron
 
 // Get returns a cron job by ID, or nil if not found.
 func (s *CronService) Get(ctx context.Context, id int64) (*CronJob, error) {
-	filter := [][]any{{"id", "=", id}}
-	result, err := s.client.Call(ctx, "cronjob.query", filter)
+	result, err := s.client.Call(ctx, "cronjob.get_instance", id)
 	if err != nil {
+		if isNotFoundError(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	var jobs []CronJobResponse
-	if err := json.Unmarshal(result, &jobs); err != nil {
-		return nil, fmt.Errorf("parse query response: %w", err)
+	var resp CronJobResponse
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, fmt.Errorf("parse get_instance response: %w", err)
 	}
 
-	if len(jobs) == 0 {
-		return nil, nil
-	}
-
-	job := cronJobFromResponse(jobs[0])
+	job := cronJobFromResponse(resp)
 	return &job, nil
 }
 

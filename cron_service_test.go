@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// sampleCronJobJSON returns a JSON response for a cron job with inverted stdout/stderr.
+// sampleCronJobJSON returns a JSON array response for a cron job query.
 func sampleCronJobJSON() json.RawMessage {
 	return json.RawMessage(`[{
 		"id": 1,
@@ -25,6 +25,26 @@ func sampleCronJobJSON() json.RawMessage {
 			"dow": "*"
 		}
 	}]`)
+}
+
+// sampleCronJobSingleJSON returns a single JSON object response for get_instance.
+func sampleCronJobSingleJSON() json.RawMessage {
+	return json.RawMessage(`{
+		"id": 1,
+		"user": "root",
+		"command": "/usr/local/bin/backup.sh",
+		"description": "Daily backup",
+		"enabled": true,
+		"stdout": false,
+		"stderr": true,
+		"schedule": {
+			"minute": "0",
+			"hour": "3",
+			"dom": "*",
+			"month": "*",
+			"dow": "*"
+		}
+	}`)
 }
 
 func TestCronService_Create(t *testing.T) {
@@ -46,7 +66,8 @@ func TestCronService_Create(t *testing.T) {
 					}
 					return json.RawMessage(`{"id": 1}`), nil
 				}
-				return sampleCronJobJSON(), nil
+				// Re-read via get_instance returns single object
+				return sampleCronJobSingleJSON(), nil
 			},
 		},
 	}
@@ -137,10 +158,13 @@ func TestCronService_Get(t *testing.T) {
 	mock := &mockAsyncCaller{
 		mockCaller: mockCaller{
 			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-				if method != "cronjob.query" {
-					t.Errorf("expected method cronjob.query, got %s", method)
+				if method != "cronjob.get_instance" {
+					t.Errorf("expected method cronjob.get_instance, got %s", method)
 				}
-				return sampleCronJobJSON(), nil
+				if params != int64(1) {
+					t.Errorf("expected params to be int64(1), got %v (%T)", params, params)
+				}
+				return sampleCronJobSingleJSON(), nil
 			},
 		},
 	}
@@ -168,7 +192,7 @@ func TestCronService_Get_NotFound(t *testing.T) {
 	mock := &mockAsyncCaller{
 		mockCaller: mockCaller{
 			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-				return json.RawMessage(`[]`), nil
+				return nil, errors.New("cronjob 999 does not exist")
 			},
 		},
 	}
@@ -176,7 +200,7 @@ func TestCronService_Get_NotFound(t *testing.T) {
 	svc := NewCronService(mock, Version{})
 	job, err := svc.Get(context.Background(), 999)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("expected nil error for not-found, got: %v", err)
 	}
 	if job != nil {
 		t.Error("expected nil job for not found")
@@ -294,7 +318,8 @@ func TestCronService_Update(t *testing.T) {
 					}
 					return json.RawMessage(`{"id": 1}`), nil
 				}
-				return sampleCronJobJSON(), nil
+				// Re-read via get_instance returns single object
+				return sampleCronJobSingleJSON(), nil
 			},
 		},
 	}
