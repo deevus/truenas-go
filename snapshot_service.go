@@ -13,7 +13,8 @@ const (
 	methodSnapshotDelete  = "delete"
 	methodSnapshotHold    = "hold"
 	methodSnapshotRelease = "release"
-	methodSnapshotClone   = "clone"
+	methodSnapshotClone    = "clone"
+	methodSnapshotRollback = "rollback"
 )
 
 // resolveSnapshotMethod returns the full API method name for the given version.
@@ -134,6 +135,40 @@ func (s *SnapshotService) Hold(ctx context.Context, id string) error {
 // Release releases a hold on a snapshot.
 func (s *SnapshotService) Release(ctx context.Context, id string) error {
 	method := resolveSnapshotMethod(s.version, methodSnapshotRelease)
+	_, err := s.client.Call(ctx, method, id)
+	return err
+}
+
+// Query returns snapshots matching the given filters.
+// Filters use TrueNAS query format: [][]any{{"field", "op", "value"}}.
+// Pass nil for no filtering (equivalent to List).
+func (s *SnapshotService) Query(ctx context.Context, filters [][]any) ([]Snapshot, error) {
+	var params any
+	if len(filters) > 0 {
+		params = filters
+	}
+
+	method := resolveSnapshotMethod(s.version, methodSnapshotQuery)
+	result, err := s.client.Call(ctx, method, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []SnapshotResponse
+	if err := json.Unmarshal(result, &responses); err != nil {
+		return nil, fmt.Errorf("parse query response: %w", err)
+	}
+
+	snapshots := make([]Snapshot, len(responses))
+	for i, resp := range responses {
+		snapshots[i] = snapshotFromResponse(resp)
+	}
+	return snapshots, nil
+}
+
+// Rollback rolls back to the given snapshot by ID (dataset@name).
+func (s *SnapshotService) Rollback(ctx context.Context, id string) error {
+	method := resolveSnapshotMethod(s.version, methodSnapshotRollback)
 	_, err := s.client.Call(ctx, method, id)
 	return err
 }

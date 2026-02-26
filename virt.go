@@ -2,10 +2,13 @@ package truenas
 
 // VirtGlobalConfigResponse represents the global virt configuration from the API.
 type VirtGlobalConfigResponse struct {
-	Bridge    *string `json:"bridge"`
-	V4Network *string `json:"v4_network"`
-	V6Network *string `json:"v6_network"`
-	Pool      *string `json:"pool"`
+	Bridge       *string  `json:"bridge"`
+	V4Network    *string  `json:"v4_network"`
+	V6Network    *string  `json:"v6_network"`
+	Pool         *string  `json:"pool"`
+	Dataset      *string  `json:"dataset"`
+	StoragePools []string `json:"storage_pools"`
+	State        *string  `json:"state"`
 }
 
 // VirtInstanceResponse represents a virt instance from the API.

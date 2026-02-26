@@ -8,10 +8,13 @@ import (
 
 // VirtGlobalConfig is the user-facing representation of the global virt configuration.
 type VirtGlobalConfig struct {
-	Bridge    string
-	V4Network string
-	V6Network string
-	Pool      string
+	Bridge       string
+	V4Network    string
+	V6Network    string
+	Pool         string
+	Dataset      string
+	StoragePools []string
+	State        string
 }
 
 // UpdateVirtGlobalConfigOpts contains options for updating global virt configuration.
@@ -213,6 +216,32 @@ func (s *VirtService) StopInstance(ctx context.Context, name string, opts StopVi
 	return err
 }
 
+// ListInstances queries virt instances with optional filters.
+// Filters use TrueNAS query format: [][]any{{"field", "op", "value"}}.
+// Pass nil for no filtering.
+func (s *VirtService) ListInstances(ctx context.Context, filters [][]any) ([]VirtInstance, error) {
+	var params any
+	if len(filters) > 0 {
+		params = []any{filters}
+	}
+
+	result, err := s.client.Call(ctx, "virt.instance.query", params)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []VirtInstanceResponse
+	if err := json.Unmarshal(result, &responses); err != nil {
+		return nil, fmt.Errorf("parse instance list response: %w", err)
+	}
+
+	instances := make([]VirtInstance, len(responses))
+	for i, resp := range responses {
+		instances[i] = virtInstanceFromResponse(resp)
+	}
+	return instances, nil
+}
+
 // ListDevices returns all devices attached to a virt instance.
 func (s *VirtService) ListDevices(ctx context.Context, instanceID string) ([]VirtDevice, error) {
 	result, err := s.client.Call(ctx, "virt.instance.device_list", instanceID)
@@ -248,11 +277,18 @@ func (s *VirtService) DeleteDevice(ctx context.Context, instanceID string, devic
 // virtGlobalConfigFromResponse converts a wire-format response to a user-facing config.
 // Nil pointer fields are converted to empty strings.
 func virtGlobalConfigFromResponse(resp VirtGlobalConfigResponse) VirtGlobalConfig {
+	storagePools := resp.StoragePools
+	if storagePools == nil {
+		storagePools = []string{}
+	}
 	return VirtGlobalConfig{
-		Bridge:    derefString(resp.Bridge),
-		V4Network: derefString(resp.V4Network),
-		V6Network: derefString(resp.V6Network),
-		Pool:      derefString(resp.Pool),
+		Bridge:       derefString(resp.Bridge),
+		V4Network:    derefString(resp.V4Network),
+		V6Network:    derefString(resp.V6Network),
+		Pool:         derefString(resp.Pool),
+		Dataset:      derefString(resp.Dataset),
+		StoragePools: storagePools,
+		State:        derefString(resp.State),
 	}
 }
 
@@ -369,9 +405,15 @@ func virtDeviceOptToParam(opt VirtDeviceOpts) map[string]any {
 		m["source"] = opt.Source
 		m["destination"] = opt.Destination
 	case "NIC":
-		m["network"] = opt.Network
-		m["nic_type"] = opt.NICType
-		m["parent"] = opt.Parent
+		if opt.Network != "" {
+			m["network"] = opt.Network
+		}
+		if opt.NICType != "" {
+			m["nic_type"] = opt.NICType
+		}
+		if opt.Parent != "" {
+			m["parent"] = opt.Parent
+		}
 	case "PROXY":
 		m["source_proto"] = opt.SourceProto
 		m["source_port"] = opt.SourcePort
