@@ -10,6 +10,8 @@ type SnapshotServiceAPI interface {
 	Delete(ctx context.Context, id string) error
 	Hold(ctx context.Context, id string) error
 	Release(ctx context.Context, id string) error
+	Query(ctx context.Context, filters [][]any) ([]Snapshot, error)
+	Rollback(ctx context.Context, id string) error
 	Clone(ctx context.Context, snapshot, datasetDst string) error
 }
 
@@ -25,7 +27,9 @@ type MockSnapshotService struct {
 	DeleteFunc  func(ctx context.Context, id string) error
 	HoldFunc    func(ctx context.Context, id string) error
 	ReleaseFunc func(ctx context.Context, id string) error
-	CloneFunc   func(ctx context.Context, snapshot, datasetDst string) error
+	QueryFunc    func(ctx context.Context, filters [][]any) ([]Snapshot, error)
+	RollbackFunc func(ctx context.Context, id string) error
+	CloneFunc    func(ctx context.Context, snapshot, datasetDst string) error
 }
 
 func (m *MockSnapshotService) Create(ctx context.Context, opts CreateSnapshotOpts) (*Snapshot, error) {
@@ -66,6 +70,20 @@ func (m *MockSnapshotService) Hold(ctx context.Context, id string) error {
 func (m *MockSnapshotService) Release(ctx context.Context, id string) error {
 	if m.ReleaseFunc != nil {
 		return m.ReleaseFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockSnapshotService) Query(ctx context.Context, filters [][]any) ([]Snapshot, error) {
+	if m.QueryFunc != nil {
+		return m.QueryFunc(ctx, filters)
+	}
+	return nil, nil
+}
+
+func (m *MockSnapshotService) Rollback(ctx context.Context, id string) error {
+	if m.RollbackFunc != nil {
+		return m.RollbackFunc(ctx, id)
 	}
 	return nil
 }

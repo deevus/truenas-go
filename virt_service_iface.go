@@ -12,6 +12,7 @@ type VirtServiceAPI interface {
 	DeleteInstance(ctx context.Context, name string) error
 	StartInstance(ctx context.Context, name string) error
 	StopInstance(ctx context.Context, name string, opts StopVirtInstanceOpts) error
+	ListInstances(ctx context.Context, filters [][]any) ([]VirtInstance, error)
 	ListDevices(ctx context.Context, instanceID string) ([]VirtDevice, error)
 	AddDevice(ctx context.Context, instanceID string, opts VirtDeviceOpts) error
 	DeleteDevice(ctx context.Context, instanceID string, deviceName string) error
@@ -31,6 +32,7 @@ type MockVirtService struct {
 	DeleteInstanceFunc     func(ctx context.Context, name string) error
 	StartInstanceFunc      func(ctx context.Context, name string) error
 	StopInstanceFunc       func(ctx context.Context, name string, opts StopVirtInstanceOpts) error
+	ListInstancesFunc      func(ctx context.Context, filters [][]any) ([]VirtInstance, error)
 	ListDevicesFunc        func(ctx context.Context, instanceID string) ([]VirtDevice, error)
 	AddDeviceFunc          func(ctx context.Context, instanceID string, opts VirtDeviceOpts) error
 	DeleteDeviceFunc       func(ctx context.Context, instanceID string, deviceName string) error
@@ -90,6 +92,13 @@ func (m *MockVirtService) StopInstance(ctx context.Context, name string, opts St
 		return m.StopInstanceFunc(ctx, name, opts)
 	}
 	return nil
+}
+
+func (m *MockVirtService) ListInstances(ctx context.Context, filters [][]any) ([]VirtInstance, error) {
+	if m.ListInstancesFunc != nil {
+		return m.ListInstancesFunc(ctx, filters)
+	}
+	return nil, nil
 }
 
 func (m *MockVirtService) ListDevices(ctx context.Context, instanceID string) ([]VirtDevice, error) {
