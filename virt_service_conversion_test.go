@@ -391,3 +391,103 @@ func TestVirtDeviceOptToParam_WithName(t *testing.T) {
 		t.Errorf("expected name mydevice, got %v", m["name"])
 	}
 }
+
+func TestVirtDeviceOptToParam_NIC_PartialFields(t *testing.T) {
+	t.Run("only nic_type and parent", func(t *testing.T) {
+		m := virtDeviceOptToParam(VirtDeviceOpts{
+			DevType: "NIC",
+			NICType: "MACVLAN",
+			Parent:  "eno1",
+		})
+		if _, ok := m["network"]; ok {
+			t.Error("network should not be in params when empty")
+		}
+		if m["nic_type"] != "MACVLAN" {
+			t.Errorf("expected nic_type MACVLAN, got %v", m["nic_type"])
+		}
+		if m["parent"] != "eno1" {
+			t.Errorf("expected parent eno1, got %v", m["parent"])
+		}
+	})
+
+	t.Run("only network", func(t *testing.T) {
+		m := virtDeviceOptToParam(VirtDeviceOpts{
+			DevType: "NIC",
+			Network: "br0",
+		})
+		if m["network"] != "br0" {
+			t.Errorf("expected network br0, got %v", m["network"])
+		}
+		if _, ok := m["nic_type"]; ok {
+			t.Error("nic_type should not be in params when empty")
+		}
+		if _, ok := m["parent"]; ok {
+			t.Error("parent should not be in params when empty")
+		}
+	})
+
+	t.Run("no NIC fields set", func(t *testing.T) {
+		m := virtDeviceOptToParam(VirtDeviceOpts{
+			DevType: "NIC",
+		})
+		if _, ok := m["network"]; ok {
+			t.Error("network should not be in params when empty")
+		}
+		if _, ok := m["nic_type"]; ok {
+			t.Error("nic_type should not be in params when empty")
+		}
+		if _, ok := m["parent"]; ok {
+			t.Error("parent should not be in params when empty")
+		}
+		if m["dev_type"] != "NIC" {
+			t.Errorf("expected dev_type NIC, got %v", m["dev_type"])
+		}
+	})
+}
+
+func TestVirtGlobalConfigFromResponse_WithNewFields(t *testing.T) {
+	dataset := "tank/ix-virt"
+	state := "INITIALIZED"
+	pool := "tank"
+	resp := VirtGlobalConfigResponse{
+		Pool:         &pool,
+		Dataset:      &dataset,
+		StoragePools: []string{"tank", "ssd"},
+		State:        &state,
+	}
+
+	cfg := virtGlobalConfigFromResponse(resp)
+	if cfg.Dataset != "tank/ix-virt" {
+		t.Errorf("expected dataset tank/ix-virt, got %s", cfg.Dataset)
+	}
+	if len(cfg.StoragePools) != 2 {
+		t.Fatalf("expected 2 storage pools, got %d", len(cfg.StoragePools))
+	}
+	if cfg.StoragePools[0] != "tank" {
+		t.Errorf("expected first storage pool tank, got %s", cfg.StoragePools[0])
+	}
+	if cfg.StoragePools[1] != "ssd" {
+		t.Errorf("expected second storage pool ssd, got %s", cfg.StoragePools[1])
+	}
+	if cfg.State != "INITIALIZED" {
+		t.Errorf("expected state INITIALIZED, got %s", cfg.State)
+	}
+}
+
+func TestVirtGlobalConfigFromResponse_NilNewFields(t *testing.T) {
+	resp := VirtGlobalConfigResponse{}
+
+	cfg := virtGlobalConfigFromResponse(resp)
+	if cfg.Dataset != "" {
+		t.Errorf("expected empty dataset, got %s", cfg.Dataset)
+	}
+	if cfg.StoragePools == nil {
+		t.Error("expected non-nil storage pools slice")
+	}
+	if len(cfg.StoragePools) != 0 {
+		t.Errorf("expected 0 storage pools, got %d", len(cfg.StoragePools))
+	}
+	if cfg.State != "" {
+		t.Errorf("expected empty state, got %s", cfg.State)
+	}
+}
