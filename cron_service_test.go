@@ -29,26 +29,25 @@ func sampleCronJobJSON() json.RawMessage {
 
 func TestCronService_Create(t *testing.T) {
 	callCount := 0
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			callCount++
-			if callCount == 1 {
-				// cronjob.create returns object with ID
-				if method != "cronjob.create" {
-					t.Errorf("expected method cronjob.create, got %s", method)
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				callCount++
+				if callCount == 1 {
+					if method != "cronjob.create" {
+						t.Errorf("expected method cronjob.create, got %s", method)
+					}
+					p := params.(map[string]any)
+					if p["stdout"] != true {
+						t.Error("expected stdout=true (CaptureStdout=false inverted)")
+					}
+					if p["stderr"] != false {
+						t.Error("expected stderr=false (CaptureStderr=true inverted)")
+					}
+					return json.RawMessage(`{"id": 1}`), nil
 				}
-				// Verify stdout/stderr inversion in params
-				p := params.(map[string]any)
-				if p["stdout"] != true {
-					t.Error("expected stdout=true (CaptureStdout=false inverted)")
-				}
-				if p["stderr"] != false {
-					t.Error("expected stderr=false (CaptureStderr=true inverted)")
-				}
-				return json.RawMessage(`{"id": 1}`), nil
-			}
-			// cronjob.query for re-read
-			return sampleCronJobJSON(), nil
+				return sampleCronJobJSON(), nil
+			},
 		},
 	}
 
@@ -97,9 +96,11 @@ func TestCronService_Create(t *testing.T) {
 }
 
 func TestCronService_Create_Error(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("connection refused")
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("connection refused")
+			},
 		},
 	}
 
@@ -117,9 +118,11 @@ func TestCronService_Create_Error(t *testing.T) {
 }
 
 func TestCronService_Create_ParseError(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return json.RawMessage(`not json`), nil
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return json.RawMessage(`not json`), nil
+			},
 		},
 	}
 
@@ -131,12 +134,14 @@ func TestCronService_Create_ParseError(t *testing.T) {
 }
 
 func TestCronService_Get(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			if method != "cronjob.query" {
-				t.Errorf("expected method cronjob.query, got %s", method)
-			}
-			return sampleCronJobJSON(), nil
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				if method != "cronjob.query" {
+					t.Errorf("expected method cronjob.query, got %s", method)
+				}
+				return sampleCronJobJSON(), nil
+			},
 		},
 	}
 
@@ -160,9 +165,11 @@ func TestCronService_Get(t *testing.T) {
 }
 
 func TestCronService_Get_NotFound(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return json.RawMessage(`[]`), nil
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return json.RawMessage(`[]`), nil
+			},
 		},
 	}
 
@@ -177,9 +184,11 @@ func TestCronService_Get_NotFound(t *testing.T) {
 }
 
 func TestCronService_Get_Error(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("timeout")
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("timeout")
+			},
 		},
 	}
 
@@ -191,18 +200,20 @@ func TestCronService_Get_Error(t *testing.T) {
 }
 
 func TestCronService_List(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			if method != "cronjob.query" {
-				t.Errorf("expected method cronjob.query, got %s", method)
-			}
-			if params != nil {
-				t.Error("expected nil params for List")
-			}
-			return json.RawMessage(`[
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				if method != "cronjob.query" {
+					t.Errorf("expected method cronjob.query, got %s", method)
+				}
+				if params != nil {
+					t.Error("expected nil params for List")
+				}
+				return json.RawMessage(`[
 				{"id": 1, "user": "root", "command": "cmd1", "description": "", "enabled": true, "stdout": true, "stderr": true, "schedule": {"minute": "0", "hour": "1", "dom": "*", "month": "*", "dow": "*"}},
 				{"id": 2, "user": "admin", "command": "cmd2", "description": "job2", "enabled": false, "stdout": false, "stderr": false, "schedule": {"minute": "30", "hour": "*/2", "dom": "1", "month": "1-6", "dow": "1-5"}}
 			]`), nil
+			},
 		},
 	}
 
@@ -226,9 +237,11 @@ func TestCronService_List(t *testing.T) {
 }
 
 func TestCronService_List_Empty(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return json.RawMessage(`[]`), nil
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return json.RawMessage(`[]`), nil
+			},
 		},
 	}
 
@@ -243,9 +256,11 @@ func TestCronService_List_Empty(t *testing.T) {
 }
 
 func TestCronService_List_Error(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("network error")
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("network error")
+			},
 		},
 	}
 
@@ -258,29 +273,29 @@ func TestCronService_List_Error(t *testing.T) {
 
 func TestCronService_Update(t *testing.T) {
 	callCount := 0
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			callCount++
-			if callCount == 1 {
-				if method != "cronjob.update" {
-					t.Errorf("expected method cronjob.update, got %s", method)
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				callCount++
+				if callCount == 1 {
+					if method != "cronjob.update" {
+						t.Errorf("expected method cronjob.update, got %s", method)
+					}
+					slice, ok := params.([]any)
+					if !ok {
+						t.Fatal("expected []any params for update")
+					}
+					if len(slice) != 2 {
+						t.Fatalf("expected 2 elements, got %d", len(slice))
+					}
+					id, ok := slice[0].(int64)
+					if !ok || id != 1 {
+						t.Errorf("expected id 1, got %v", slice[0])
+					}
+					return json.RawMessage(`{"id": 1}`), nil
 				}
-				// Verify params shape: []any{id, map}
-				slice, ok := params.([]any)
-				if !ok {
-					t.Fatal("expected []any params for update")
-				}
-				if len(slice) != 2 {
-					t.Fatalf("expected 2 elements, got %d", len(slice))
-				}
-				id, ok := slice[0].(int64)
-				if !ok || id != 1 {
-					t.Errorf("expected id 1, got %v", slice[0])
-				}
-				return json.RawMessage(`{"id": 1}`), nil
-			}
-			// Re-query
-			return sampleCronJobJSON(), nil
+				return sampleCronJobJSON(), nil
+			},
 		},
 	}
 
@@ -308,9 +323,11 @@ func TestCronService_Update(t *testing.T) {
 }
 
 func TestCronService_Update_Error(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("not found")
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("not found")
+			},
 		},
 	}
 
@@ -322,16 +339,18 @@ func TestCronService_Update_Error(t *testing.T) {
 }
 
 func TestCronService_Delete(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			if method != "cronjob.delete" {
-				t.Errorf("expected method cronjob.delete, got %s", method)
-			}
-			id, ok := params.(int64)
-			if !ok || id != 5 {
-				t.Errorf("expected id 5, got %v", params)
-			}
-			return nil, nil
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				if method != "cronjob.delete" {
+					t.Errorf("expected method cronjob.delete, got %s", method)
+				}
+				id, ok := params.(int64)
+				if !ok || id != 5 {
+					t.Errorf("expected id 5, got %v", params)
+				}
+				return nil, nil
+			},
 		},
 	}
 
@@ -343,9 +362,11 @@ func TestCronService_Delete(t *testing.T) {
 }
 
 func TestCronService_Delete_Error(t *testing.T) {
-	mock := &mockCaller{
-		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("permission denied")
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("permission denied")
+			},
 		},
 	}
 
@@ -353,6 +374,71 @@ func TestCronService_Delete_Error(t *testing.T) {
 	err := svc.Delete(context.Background(), 1)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestCronService_Run(t *testing.T) {
+	mock := &mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			if method != "cronjob.run" {
+				t.Errorf("expected method cronjob.run, got %s", method)
+			}
+			slice, ok := params.([]any)
+			if !ok {
+				t.Fatalf("expected []any params, got %T", params)
+			}
+			if len(slice) != 2 {
+				t.Fatalf("expected 2 elements, got %d", len(slice))
+			}
+			if slice[0] != int64(7) {
+				t.Errorf("expected id 7, got %v", slice[0])
+			}
+			if slice[1] != false {
+				t.Errorf("expected skipDisabled=false, got %v", slice[1])
+			}
+			return nil, nil
+		},
+	}
+
+	svc := NewCronService(mock, Version{})
+	err := svc.Run(context.Background(), 7, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCronService_Run_SkipDisabled(t *testing.T) {
+	mock := &mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			slice := params.([]any)
+			if slice[1] != true {
+				t.Errorf("expected skipDisabled=true, got %v", slice[1])
+			}
+			return nil, nil
+		},
+	}
+
+	svc := NewCronService(mock, Version{})
+	err := svc.Run(context.Background(), 3, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCronService_Run_Error(t *testing.T) {
+	mock := &mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return nil, errors.New("job failed")
+		},
+	}
+
+	svc := NewCronService(mock, Version{})
+	err := svc.Run(context.Background(), 1, false)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "job failed" {
+		t.Errorf("expected 'job failed', got %q", err.Error())
 	}
 }
 
