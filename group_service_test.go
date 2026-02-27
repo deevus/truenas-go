@@ -533,6 +533,20 @@ func TestGroupService_Update_Error(t *testing.T) {
 	}
 }
 
+func TestGroupService_Delete_Error(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return nil, errors.New("delete failed")
+		},
+	}
+
+	svc := NewGroupService(mock, Version{})
+	err := svc.Delete(context.Background(), 1)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestGroupService_QueryOne_Error(t *testing.T) {
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {

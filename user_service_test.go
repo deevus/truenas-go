@@ -312,8 +312,8 @@ func TestNewUserService(t *testing.T) {
 	}
 }
 
-func sampleUserJSON() string {
-	return `{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "home_mode": "755", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`
+func sampleUserJSON() json.RawMessage {
+	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "home_mode": "755", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
 }
 
 func TestUserService_Create(t *testing.T) {
@@ -331,7 +331,7 @@ func TestUserService_Create(t *testing.T) {
 				if method != "user.get_instance" {
 					t.Errorf("expected user.get_instance, got %s", method)
 				}
-				return json.RawMessage(sampleUserJSON()), nil
+				return sampleUserJSON(), nil
 			default:
 				t.Fatalf("unexpected call %d: %s", callCount, method)
 				return nil, nil
@@ -362,7 +362,7 @@ func TestUserService_Get(t *testing.T) {
 			if method != "user.get_instance" {
 				t.Errorf("expected user.get_instance, got %s", method)
 			}
-			return json.RawMessage(sampleUserJSON()), nil
+			return sampleUserJSON(), nil
 		},
 	}
 
@@ -412,7 +412,7 @@ func TestUserService_GetByUsername(t *testing.T) {
 			if filters[0][0] != "username" || filters[0][1] != "=" || filters[0][2] != "jdoe" {
 				t.Errorf("unexpected filter: %v", filters[0])
 			}
-			return json.RawMessage("[" + sampleUserJSON() + "]"), nil
+			return json.RawMessage("[" + string(sampleUserJSON()) + "]"), nil
 		},
 	}
 
@@ -459,7 +459,7 @@ func TestUserService_GetByUID(t *testing.T) {
 			if filters[0][0] != "uid" || filters[0][1] != "=" || filters[0][2] != int64(1001) {
 				t.Errorf("unexpected filter: %v", filters[0])
 			}
-			return json.RawMessage("[" + sampleUserJSON() + "]"), nil
+			return json.RawMessage("[" + string(sampleUserJSON()) + "]"), nil
 		},
 	}
 
@@ -477,7 +477,7 @@ func TestUserService_GetByUID(t *testing.T) {
 }
 
 func TestUserService_List(t *testing.T) {
-	listJSON := `[` + sampleUserJSON() + `]`
+	listJSON := "[" + string(sampleUserJSON()) + "]"
 
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
@@ -526,7 +526,7 @@ func TestUserService_Update(t *testing.T) {
 				if method != "user.get_instance" {
 					t.Errorf("expected user.get_instance, got %s", method)
 				}
-				return json.RawMessage(sampleUserJSON()), nil
+				return sampleUserJSON(), nil
 			default:
 				t.Fatalf("unexpected call %d", callCount)
 				return nil, nil
@@ -673,6 +673,20 @@ func TestUserService_Update_Error(t *testing.T) {
 
 	svc := NewUserService(mock, Version{})
 	_, err := svc.Update(context.Background(), 1, UpdateUserOpts{Username: "fail"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestUserService_Delete_Error(t *testing.T) {
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			return nil, errors.New("delete failed")
+		},
+	}
+
+	svc := NewUserService(mock, Version{})
+	err := svc.Delete(context.Background(), 1)
 	if err == nil {
 		t.Fatal("expected error")
 	}

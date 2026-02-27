@@ -85,6 +85,7 @@ func (s *GroupService) Get(ctx context.Context, id int64) (*Group, error) {
 }
 
 // GetByName returns a group by name, or nil if not found.
+// The API filter field is "group" (not "name") for historical BSD reasons.
 func (s *GroupService) GetByName(ctx context.Context, name string) (*Group, error) {
 	return s.queryOne(ctx, "group", name)
 }
