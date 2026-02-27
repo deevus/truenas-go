@@ -214,7 +214,7 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
 | group.create | ✓ | Create | ✓ | 3 |
-| group.delete | ✓ | Delete | ✓ | 1 |
+| group.delete | ✓ | Delete | ✓ | 2 |
 | group.get_group_obj |  |  |  |  |
 | group.get_instance | ✓ | Get | ✓ | 4 |
 | group.get_next_gid |  |  |  |  |
@@ -307,7 +307,7 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
 | user.create | ✓ | Create | ✓ | 3 |
-| user.delete | ✓ | Delete | ✓ | 1 |
+| user.delete | ✓ | Delete | ✓ | 2 |
 | user.get_instance | ✓ | Get | ✓ | 4 |
 | user.get_next_uid |  |  |  |  |
 | user.get_user_obj |  |  |  |  |
