@@ -130,6 +130,40 @@ func TestBuildCommand_AppCreateParamsWithCompose(t *testing.T) {
 	}
 }
 
+func TestBuildCommand_AppCreateParamsCatalogApp(t *testing.T) {
+	params := AppCreateParams{
+		AppName:    "tailscale",
+		CatalogApp: "tailscale",
+		Train:      "community",
+		Values:     map[string]any{"tailscale": map[string]any{"auth_key": "tskey-xxx"}},
+	}
+
+	got := BuildCommand("app.create", params)
+
+	if got == "" {
+		t.Error("BuildCommand() returned empty string")
+	}
+
+	// Should contain catalog fields
+	if !strings.Contains(got, "catalog_app") {
+		t.Errorf("expected 'catalog_app' in output, got %q", got)
+	}
+	if !strings.Contains(got, "tailscale") {
+		t.Errorf("expected 'tailscale' in output, got %q", got)
+	}
+	if !strings.Contains(got, "community") {
+		t.Errorf("expected 'community' in output, got %q", got)
+	}
+	// custom_app should be false, so it should appear as false
+	if !strings.Contains(got, `"custom_app":false`) {
+		t.Errorf("expected 'custom_app:false' in output, got %q", got)
+	}
+	// Should NOT contain compose config
+	if strings.Contains(got, "custom_compose_config_string") {
+		t.Errorf("expected no 'custom_compose_config_string' for catalog app, got %q", got)
+	}
+}
+
 func TestBuildCommand_MarshalError(t *testing.T) {
 	// Create an unmarshallable type (channel) to trigger json.Marshal error
 	params := make(chan int)
