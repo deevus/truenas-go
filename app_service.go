@@ -45,7 +45,7 @@ type AppContainerDetails struct {
 
 // CreateAppOpts contains options for creating an app.
 // Set CatalogApp for catalog apps or CustomApp with CustomComposeConfig
-// for custom Docker Compose apps. CatalogApp takes precedence if both are set.
+// for custom Docker Compose apps. These modes are mutually exclusive.
 type CreateAppOpts struct {
 	Name                string
 	CustomApp           bool
@@ -152,8 +152,11 @@ func NewAppService(c SubscribeCaller, v Version) *AppService {
 
 // CreateApp creates an app and returns the full object.
 func (s *AppService) CreateApp(ctx context.Context, opts CreateAppOpts) (*App, error) {
-	params := createAppParams(opts)
-	_, err := s.client.CallAndWait(ctx, "app.create", params)
+	params, err := createAppParams(opts)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.client.CallAndWait(ctx, "app.create", params)
 	if err != nil {
 		return nil, err
 	}
@@ -537,11 +540,24 @@ func appImageFromResponse(resp AppImageResponse) AppImage {
 }
 
 // createAppParams converts CreateAppOpts to API parameters.
-func createAppParams(opts CreateAppOpts) map[string]any {
+func createAppParams(opts CreateAppOpts) (map[string]any, error) {
+	isCatalog := opts.CatalogApp != ""
+	isCustom := opts.CustomApp || opts.CustomComposeConfig != ""
+
+	if isCatalog && isCustom {
+		return nil, fmt.Errorf("CatalogApp and CustomApp/CustomComposeConfig are mutually exclusive")
+	}
+	if !isCatalog && !isCustom {
+		return nil, fmt.Errorf("either CatalogApp or CustomApp must be set")
+	}
+	if opts.Values != nil && !isCatalog {
+		return nil, fmt.Errorf("Values can only be used with CatalogApp")
+	}
+
 	params := map[string]any{
 		"app_name": opts.Name,
 	}
-	if opts.CatalogApp != "" {
+	if isCatalog {
 		params["custom_app"] = false
 		params["catalog_app"] = opts.CatalogApp
 		if opts.Train != "" {
@@ -554,12 +570,12 @@ func createAppParams(opts CreateAppOpts) map[string]any {
 			params["values"] = opts.Values
 		}
 	} else {
-		params["custom_app"] = opts.CustomApp
+		params["custom_app"] = true
 		if opts.CustomComposeConfig != "" {
 			params["custom_compose_config_string"] = opts.CustomComposeConfig
 		}
 	}
-	return params
+	return params, nil
 }
 
 // updateAppParams converts UpdateAppOpts to API parameters.

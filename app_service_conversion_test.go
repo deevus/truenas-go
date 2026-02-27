@@ -135,7 +135,10 @@ func TestCreateAppParams_CatalogApp(t *testing.T) {
 		Train:      "community",
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["app_name"] != "tailscale" {
 		t.Errorf("expected app_name 'tailscale', got %v", params["app_name"])
@@ -163,7 +166,10 @@ func TestCreateAppParams_CatalogAppWithValues(t *testing.T) {
 		Values:     map[string]any{"tailscale": map[string]any{"auth_key": "tskey-xxx"}},
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["catalog_app"] != "tailscale" {
 		t.Errorf("expected catalog_app 'tailscale', got %v", params["catalog_app"])
@@ -200,24 +206,45 @@ func TestUpdateAppParams_WithValues(t *testing.T) {
 	}
 }
 
-func TestCreateAppParams_CatalogAppOverridesCustomApp(t *testing.T) {
-	opts := CreateAppOpts{
+func TestCreateAppParams_CatalogAndCustomAppError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
 		Name:       "confused",
 		CustomApp:  true,
 		CatalogApp: "plex",
-		Train:      "stable",
+	})
+	if err == nil {
+		t.Fatal("expected error when both CatalogApp and CustomApp are set")
 	}
+}
 
-	params := createAppParams(opts)
+func TestCreateAppParams_CatalogAndComposeConfigError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name:                "confused",
+		CatalogApp:          "plex",
+		CustomComposeConfig: "services:\n  web:\n    image: nginx",
+	})
+	if err == nil {
+		t.Fatal("expected error when both CatalogApp and CustomComposeConfig are set")
+	}
+}
 
-	if params["custom_app"] != false {
-		t.Errorf("expected CatalogApp to override custom_app to false, got %v", params["custom_app"])
+func TestCreateAppParams_NeitherCatalogNorCustomError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name: "nothing",
+	})
+	if err == nil {
+		t.Fatal("expected error when neither CatalogApp nor CustomApp is set")
 	}
-	if params["catalog_app"] != "plex" {
-		t.Errorf("expected catalog_app 'plex', got %v", params["catalog_app"])
-	}
-	if _, ok := params["custom_compose_config_string"]; ok {
-		t.Error("expected no custom_compose_config_string when CatalogApp is set")
+}
+
+func TestCreateAppParams_ValuesWithCustomAppError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name:      "bad",
+		CustomApp: true,
+		Values:    map[string]any{"TZ": "UTC"},
+	})
+	if err == nil {
+		t.Fatal("expected error when Values is used with CustomApp")
 	}
 }
 
@@ -278,7 +305,10 @@ func TestCreateAppParams(t *testing.T) {
 		CustomComposeConfig: "version: '3'",
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["app_name"] != "my-app" {
 		t.Errorf("expected app_name my-app, got %v", params["app_name"])
@@ -291,19 +321,22 @@ func TestCreateAppParams(t *testing.T) {
 	}
 }
 
-func TestCreateAppParams_NoCompose(t *testing.T) {
+func TestCreateAppParams_CustomAppNoCompose(t *testing.T) {
 	opts := CreateAppOpts{
 		Name:      "simple-app",
-		CustomApp: false,
+		CustomApp: true,
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["app_name"] != "simple-app" {
 		t.Errorf("expected app_name simple-app, got %v", params["app_name"])
 	}
-	if params["custom_app"] != false {
-		t.Errorf("expected custom_app false, got %v", params["custom_app"])
+	if params["custom_app"] != true {
+		t.Errorf("expected custom_app true, got %v", params["custom_app"])
 	}
 	if _, ok := params["custom_compose_config_string"]; ok {
 		t.Error("expected no custom_compose_config_string for empty config")

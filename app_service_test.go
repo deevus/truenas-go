@@ -66,7 +66,7 @@ func TestAppService_CreateApp_Error(t *testing.T) {
 	}}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-app"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-app", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -89,7 +89,7 @@ func TestAppService_CreateApp_NotFoundAfterCreate(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "ghost-app"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "ghost-app", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error for not found after create")
 	}
@@ -109,7 +109,7 @@ func TestAppService_CreateApp_ParseError(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	_, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "parse-fail"})
+	_, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "parse-fail", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected parse error")
 	}
@@ -589,7 +589,7 @@ func TestAppService_CreateApp_ReReadError(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-reread"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-reread", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}
