@@ -93,12 +93,14 @@ func (s *UserService) Create(ctx context.Context, opts CreateUserOpts) (*User, e
 		return nil, err
 	}
 
-	var id int64
-	if err := json.Unmarshal(result, &id); err != nil {
+	var createResp struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal(result, &createResp); err != nil {
 		return nil, fmt.Errorf("parse create response: %w", err)
 	}
 
-	return s.Get(ctx, id)
+	return s.Get(ctx, createResp.ID)
 }
 
 // Get returns a user by ID, or nil if not found.
@@ -192,10 +194,9 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
+		"email":                opts.Email,
 		"password_disabled":    opts.PasswordDisabled,
-		"group_create":         opts.GroupCreate,
 		"home":                 opts.Home,
-		"home_create":          opts.HomeCreate,
 		"home_mode":            opts.HomeMode,
 		"shell":                opts.Shell,
 		"smb":                  opts.SMB,
@@ -205,8 +206,11 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 	if opts.UID != 0 {
 		params["uid"] = opts.UID
 	}
-	if opts.Email != "" {
-		params["email"] = opts.Email
+	if opts.GroupCreate {
+		params["group_create"] = true
+	}
+	if opts.HomeCreate {
+		params["home_create"] = true
 	}
 	if opts.Password != "" {
 		params["password"] = opts.Password
@@ -235,6 +239,7 @@ func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
+		"email":                opts.Email,
 		"password_disabled":    opts.PasswordDisabled,
 		"home":                 opts.Home,
 		"home_mode":            opts.HomeMode,
@@ -242,9 +247,6 @@ func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 		"smb":                  opts.SMB,
 		"ssh_password_enabled": opts.SSHPasswordEnabled,
 		"locked":               opts.Locked,
-	}
-	if opts.Email != "" {
-		params["email"] = opts.Email
 	}
 	if opts.Password != "" {
 		params["password"] = opts.Password
