@@ -200,6 +200,27 @@ func TestUpdateAppParams_WithValues(t *testing.T) {
 	}
 }
 
+func TestCreateAppParams_CatalogAppOverridesCustomApp(t *testing.T) {
+	opts := CreateAppOpts{
+		Name:       "confused",
+		CustomApp:  true,
+		CatalogApp: "plex",
+		Train:      "stable",
+	}
+
+	params := createAppParams(opts)
+
+	if params["custom_app"] != false {
+		t.Errorf("expected CatalogApp to override custom_app to false, got %v", params["custom_app"])
+	}
+	if params["catalog_app"] != "plex" {
+		t.Errorf("expected catalog_app 'plex', got %v", params["catalog_app"])
+	}
+	if _, ok := params["custom_compose_config_string"]; ok {
+		t.Error("expected no custom_compose_config_string when CatalogApp is set")
+	}
+}
+
 func TestRegistryFromResponse(t *testing.T) {
 	desc := "A registry"
 	resp := AppRegistryResponse{

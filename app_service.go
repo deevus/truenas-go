@@ -44,6 +44,8 @@ type AppContainerDetails struct {
 }
 
 // CreateAppOpts contains options for creating an app.
+// Set CatalogApp for catalog apps or CustomApp with CustomComposeConfig
+// for custom Docker Compose apps. CatalogApp takes precedence if both are set.
 type CreateAppOpts struct {
 	Name                string
 	CustomApp           bool
