@@ -213,14 +213,14 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
-| group.create | ✓ | Create | ✓ | 1 |
+| group.create | ✓ | Create | ✓ | 3 |
 | group.delete | ✓ | Delete | ✓ | 1 |
 | group.get_group_obj |  |  |  |  |
-| group.get_instance | ✓ | Get | ✓ | 2 |
+| group.get_instance | ✓ | Get | ✓ | 4 |
 | group.get_next_gid |  |  |  |  |
 | group.has_password_enabled_user |  |  |  |  |
-| group.query | ✓ | List | ✓ | 1 |
-| group.update | ✓ | Update | ✓ | 1 |
+| group.query | ✓ | List | ✓ | 3 |
+| group.update | ✓ | Update | ✓ | 2 |
 
 ### InterfaceService — `interface` (23 methods)
 
@@ -306,19 +306,19 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
-| user.create | ✓ | Create | ✓ | 1 |
+| user.create | ✓ | Create | ✓ | 3 |
 | user.delete | ✓ | Delete | ✓ | 1 |
-| user.get_instance | ✓ | Get | ✓ | 2 |
+| user.get_instance | ✓ | Get | ✓ | 4 |
 | user.get_next_uid |  |  |  |  |
 | user.get_user_obj |  |  |  |  |
 | user.has_local_administrator_set_up |  |  |  |  |
-| user.query | ✓ | List | ✓ | 1 |
+| user.query | ✓ | List | ✓ | 3 |
 | user.renew_2fa_secret |  |  |  |  |
 | user.set_password |  |  |  |  |
 | user.setup_local_administrator |  |  |  |  |
 | user.shell_choices |  |  |  |  |
 | user.unset_2fa_secret |  |  |  |  |
-| user.update | ✓ | Update | ✓ | 1 |
+| user.update | ✓ | Update | ✓ | 2 |
 
 ### VMService — `vm` (35 methods)
 
