@@ -222,7 +222,7 @@ func TestTaskOptsToParams_NoOptionalFields(t *testing.T) {
 	if _, ok := params["encryption_salt"]; ok {
 		t.Error("unexpected encryption_salt when encryption=false")
 	}
-	// No bwlimit, exclude, include, attributes
+	// No bwlimit, exclude, include
 	if _, ok := params["bwlimit"]; ok {
 		t.Error("unexpected bwlimit when empty")
 	}
@@ -232,8 +232,73 @@ func TestTaskOptsToParams_NoOptionalFields(t *testing.T) {
 	if _, ok := params["include"]; ok {
 		t.Error("unexpected include when empty")
 	}
-	if _, ok := params["attributes"]; ok {
-		t.Error("unexpected attributes when nil")
+	// Attributes should still be present with fast_list even when Attributes is nil
+	attrs, ok := params["attributes"].(map[string]any)
+	if !ok {
+		t.Fatal("expected attributes map in params")
+	}
+	if attrs["fast_list"] != false {
+		t.Errorf("expected fast_list=false in attributes, got %v", attrs["fast_list"])
+	}
+}
+
+func TestTaskOptsToParams_FastList(t *testing.T) {
+	opts := CreateCloudSyncTaskOpts{
+		Description:  "FastList Task",
+		Path:         "/mnt/tank",
+		CredentialID: 1,
+		Direction:    "PUSH",
+		TransferMode: "SYNC",
+		FastList:     true,
+		Schedule: Schedule{
+			Minute: "*",
+			Hour:   "*",
+			Dom:    "*",
+			Month:  "*",
+			Dow:    "*",
+		},
+	}
+
+	params := taskOptsToParams(opts)
+
+	attrs, ok := params["attributes"].(map[string]any)
+	if !ok {
+		t.Fatal("expected attributes map in params")
+	}
+	if attrs["fast_list"] != true {
+		t.Errorf("expected fast_list=true in attributes, got %v", attrs["fast_list"])
+	}
+}
+
+func TestTaskOptsToParams_FastList_MergesWithExistingAttributes(t *testing.T) {
+	opts := CreateCloudSyncTaskOpts{
+		Description:  "Merge Task",
+		Path:         "/mnt/tank",
+		CredentialID: 1,
+		Direction:    "PUSH",
+		TransferMode: "SYNC",
+		FastList:     true,
+		Attributes:   map[string]any{"bucket": "my-bucket"},
+		Schedule: Schedule{
+			Minute: "*",
+			Hour:   "*",
+			Dom:    "*",
+			Month:  "*",
+			Dow:    "*",
+		},
+	}
+
+	params := taskOptsToParams(opts)
+
+	attrs, ok := params["attributes"].(map[string]any)
+	if !ok {
+		t.Fatal("expected attributes map in params")
+	}
+	if attrs["bucket"] != "my-bucket" {
+		t.Errorf("expected bucket=my-bucket, got %v", attrs["bucket"])
+	}
+	if attrs["fast_list"] != true {
+		t.Errorf("expected fast_list=true in attributes, got %v", attrs["fast_list"])
 	}
 }
 
@@ -286,6 +351,44 @@ func TestTaskFromResponse_NullAttributes(t *testing.T) {
 	task := taskFromResponse(resp)
 	if task.Attributes != nil {
 		t.Errorf("expected nil attributes, got %v", task.Attributes)
+	}
+}
+
+func TestTaskFromResponse_FastList(t *testing.T) {
+	resp := CloudSyncTaskResponse{
+		ID:          1,
+		Description: "Test",
+		Credentials: CloudSyncTaskCredentialRef{ID: 1},
+		Attributes:  json.RawMessage(`{"bucket": "my-bucket", "fast_list": true}`),
+		Schedule:    ScheduleResponse{Minute: "*", Hour: "*", Dom: "*", Month: "*", Dow: "*"},
+	}
+
+	task := taskFromResponse(resp)
+	if !task.FastList {
+		t.Error("expected FastList=true")
+	}
+	// fast_list should be removed from the Attributes map
+	if _, ok := task.Attributes["fast_list"]; ok {
+		t.Error("fast_list should be removed from Attributes map")
+	}
+	// Other attributes should be preserved
+	if task.Attributes["bucket"] != "my-bucket" {
+		t.Errorf("expected bucket=my-bucket, got %v", task.Attributes["bucket"])
+	}
+}
+
+func TestTaskFromResponse_FastListFalse(t *testing.T) {
+	resp := CloudSyncTaskResponse{
+		ID:          1,
+		Description: "Test",
+		Credentials: CloudSyncTaskCredentialRef{ID: 1},
+		Attributes:  json.RawMessage(`{"bucket": "b"}`),
+		Schedule:    ScheduleResponse{Minute: "*", Hour: "*", Dom: "*", Month: "*", Dow: "*"},
+	}
+
+	task := taskFromResponse(resp)
+	if task.FastList {
+		t.Error("expected FastList=false when not in attributes")
 	}
 }
 
