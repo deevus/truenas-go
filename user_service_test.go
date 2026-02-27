@@ -144,24 +144,24 @@ func TestUserFromResponse_NilSlices(t *testing.T) {
 
 func TestUserCreateOptsToParams(t *testing.T) {
 	opts := CreateUserOpts{
-		Username:         "jdoe",
-		FullName:         "John Doe",
-		Email:            "john@example.com",
-		UID:              1001,
-		Password:         "secret123",
-		PasswordDisabled: false,
-		Group:            42,
-		GroupCreate:       false,
-		Groups:           []int64{100, 200},
-		Home:             "/home/jdoe",
-		HomeCreate:       true,
-		HomeMode:         "755",
-		Shell:            "/usr/bin/zsh",
-		SMB:              true,
-		SSHPasswordEnabled: true,
-		SSHPubKey:        "ssh-ed25519 AAAA...",
-		Locked:           false,
-		SudoCommands:     []string{"/usr/bin/apt"},
+		Username:             "jdoe",
+		FullName:             "John Doe",
+		Email:                "john@example.com",
+		UID:                  1001,
+		Password:             "secret123",
+		PasswordDisabled:     false,
+		Group:                42,
+		GroupCreate:          true,
+		Groups:               []int64{100, 200},
+		Home:                 "/home/jdoe",
+		HomeCreate:           true,
+		HomeMode:             "755",
+		Shell:                "/usr/bin/zsh",
+		SMB:                  true,
+		SSHPasswordEnabled:   true,
+		SSHPubKey:            "ssh-ed25519 AAAA...",
+		Locked:               false,
+		SudoCommands:         []string{"/usr/bin/apt"},
 		SudoCommandsNopasswd: []string{"/usr/bin/systemctl"},
 	}
 
@@ -188,8 +188,8 @@ func TestUserCreateOptsToParams(t *testing.T) {
 	if params["group"] != int64(42) {
 		t.Errorf("expected group=42, got %v", params["group"])
 	}
-	if params["group_create"] != false {
-		t.Errorf("expected group_create=false, got %v", params["group_create"])
+	if params["group_create"] != true {
+		t.Errorf("expected group_create=true, got %v", params["group_create"])
 	}
 	groups, ok := params["groups"].([]int64)
 	if !ok || len(groups) != 2 {
@@ -242,14 +242,21 @@ func TestUserCreateOptsToParams_OptionalFields(t *testing.T) {
 
 	params := userCreateOptsToParams(opts)
 
-	if _, ok := params["email"]; ok {
-		t.Error("expected email to be omitted when empty")
+	// email is always sent (even empty, so it can be cleared)
+	if _, ok := params["email"]; !ok {
+		t.Error("expected email to always be present")
 	}
 	if _, ok := params["password"]; ok {
 		t.Error("expected password to be omitted when empty")
 	}
 	if _, ok := params["group"]; ok {
 		t.Error("expected group to be omitted when zero")
+	}
+	if _, ok := params["group_create"]; ok {
+		t.Error("expected group_create to be omitted when false")
+	}
+	if _, ok := params["home_create"]; ok {
+		t.Error("expected home_create to be omitted when false")
 	}
 	if _, ok := params["sshpubkey"]; ok {
 		t.Error("expected sshpubkey to be omitted when empty")
@@ -272,6 +279,9 @@ func TestUserUpdateOptsToParams(t *testing.T) {
 	}
 	if params["full_name"] != "New Name" {
 		t.Errorf("expected full_name=New Name, got %v", params["full_name"])
+	}
+	if params["email"] != "new@example.com" {
+		t.Errorf("expected email=new@example.com, got %v", params["email"])
 	}
 	// No uid, group_create, home_create in update
 	if _, ok := params["uid"]; ok {
@@ -316,7 +326,7 @@ func TestUserService_Create(t *testing.T) {
 				if method != "user.create" {
 					t.Errorf("expected user.create, got %s", method)
 				}
-				return json.RawMessage(`10`), nil
+				return json.RawMessage(`{"id": 10}`), nil
 			case 2:
 				if method != "user.get_instance" {
 					t.Errorf("expected user.get_instance, got %s", method)
