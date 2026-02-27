@@ -11,6 +11,8 @@ type App struct {
 	Name             string
 	State            string
 	CustomApp        bool
+	CatalogApp       string
+	Train            string
 	Config           map[string]any
 	Version          string
 	HumanVersion     string
@@ -42,15 +44,22 @@ type AppContainerDetails struct {
 }
 
 // CreateAppOpts contains options for creating an app.
+// Set CatalogApp for catalog apps or CustomApp with CustomComposeConfig
+// for custom Docker Compose apps. These modes are mutually exclusive.
 type CreateAppOpts struct {
 	Name                string
 	CustomApp           bool
 	CustomComposeConfig string
+	CatalogApp          string
+	Train               string
+	Version             string
+	Values              map[string]any
 }
 
 // UpdateAppOpts contains options for updating an app.
 type UpdateAppOpts struct {
 	CustomComposeConfig string
+	Values              map[string]any
 }
 
 // Registry is the user-facing representation of a TrueNAS app registry.
@@ -143,8 +152,11 @@ func NewAppService(c SubscribeCaller, v Version) *AppService {
 
 // CreateApp creates an app and returns the full object.
 func (s *AppService) CreateApp(ctx context.Context, opts CreateAppOpts) (*App, error) {
-	params := createAppParams(opts)
-	_, err := s.client.CallAndWait(ctx, "app.create", params)
+	params, err := createAppParams(opts)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.client.CallAndWait(ctx, "app.create", params)
 	if err != nil {
 		return nil, err
 	}
@@ -528,15 +540,42 @@ func appImageFromResponse(resp AppImageResponse) AppImage {
 }
 
 // createAppParams converts CreateAppOpts to API parameters.
-func createAppParams(opts CreateAppOpts) map[string]any {
+func createAppParams(opts CreateAppOpts) (map[string]any, error) {
+	isCatalog := opts.CatalogApp != ""
+	isCustom := opts.CustomApp || opts.CustomComposeConfig != ""
+
+	if isCatalog && isCustom {
+		return nil, fmt.Errorf("CatalogApp and CustomApp/CustomComposeConfig are mutually exclusive")
+	}
+	if !isCatalog && !isCustom {
+		return nil, fmt.Errorf("either CatalogApp or CustomApp must be set")
+	}
+	if opts.Values != nil && !isCatalog {
+		return nil, fmt.Errorf("Values can only be used with CatalogApp")
+	}
+
 	params := map[string]any{
-		"app_name":   opts.Name,
-		"custom_app": opts.CustomApp,
+		"app_name": opts.Name,
 	}
-	if opts.CustomComposeConfig != "" {
-		params["custom_compose_config_string"] = opts.CustomComposeConfig
+	if isCatalog {
+		params["custom_app"] = false
+		params["catalog_app"] = opts.CatalogApp
+		if opts.Train != "" {
+			params["train"] = opts.Train
+		}
+		if opts.Version != "" {
+			params["version"] = opts.Version
+		}
+		if opts.Values != nil {
+			params["values"] = opts.Values
+		}
+	} else {
+		params["custom_app"] = true
+		if opts.CustomComposeConfig != "" {
+			params["custom_compose_config_string"] = opts.CustomComposeConfig
+		}
 	}
-	return params
+	return params, nil
 }
 
 // updateAppParams converts UpdateAppOpts to API parameters.
@@ -544,6 +583,9 @@ func updateAppParams(opts UpdateAppOpts) map[string]any {
 	params := map[string]any{}
 	if opts.CustomComposeConfig != "" {
 		params["custom_compose_config_string"] = opts.CustomComposeConfig
+	}
+	if opts.Values != nil {
+		params["values"] = opts.Values
 	}
 	return params
 }
@@ -589,6 +631,8 @@ func appFromResponse(resp AppResponse) App {
 		Name:             resp.Name,
 		State:            resp.State,
 		CustomApp:        resp.CustomApp,
+		CatalogApp:       resp.Metadata.Name,
+		Train:            resp.Metadata.Train,
 		Config:           resp.Config,
 		Version:          resp.Version,
 		HumanVersion:     resp.HumanVersion,
