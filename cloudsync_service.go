@@ -37,6 +37,7 @@ type CloudSyncTask struct {
 	BWLimit            []BwLimit
 	FollowSymlinks     bool
 	CreateEmptySrcDirs bool
+	FastList           bool
 	Enabled            bool
 	Encryption         bool
 	EncryptionPassword string
@@ -59,6 +60,7 @@ type CreateCloudSyncTaskOpts struct {
 	BWLimit            []BwLimit
 	FollowSymlinks     bool
 	CreateEmptySrcDirs bool
+	FastList           bool
 	Enabled            bool
 	Encryption         bool
 	EncryptionPassword string
@@ -305,9 +307,12 @@ func taskOptsToParams(opts CreateCloudSyncTaskOpts) map[string]any {
 		},
 	}
 
-	if opts.Attributes != nil {
-		params["attributes"] = opts.Attributes
+	attrs := opts.Attributes
+	if attrs == nil {
+		attrs = map[string]any{}
 	}
+	attrs["fast_list"] = opts.FastList
+	params["attributes"] = attrs
 
 	if opts.Encryption {
 		params["encryption_password"] = opts.EncryptionPassword
@@ -362,6 +367,10 @@ func taskFromResponse(resp CloudSyncTaskResponse) CloudSyncTask {
 	if len(resp.Attributes) > 0 {
 		var attrs map[string]any
 		if err := json.Unmarshal(resp.Attributes, &attrs); err == nil {
+			if fl, ok := attrs["fast_list"].(bool); ok {
+				task.FastList = fl
+				delete(attrs, "fast_list")
+			}
 			task.Attributes = attrs
 		}
 	}
