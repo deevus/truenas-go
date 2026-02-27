@@ -2,7 +2,7 @@
 
 TrueNAS version: 25.04
 
-Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemented)
+Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of implemented)
 
 ## Covered Namespaces
 
@@ -14,11 +14,13 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | DatasetService | pool, pool.dataset | 50 | 5 (10%) | 5 (100%) |
 | DockerService | docker | 8 | 2 (25%) | 2 (100%) |
 | FilesystemService | filesystem | 13 | 2 (15%) | 2 (100%) |
+| GroupService | group | 8 | 5 (62%) | 5 (100%) |
 | InterfaceService | interface | 23 | 1 (4%) | 1 (100%) |
 | NetworkService | network.general | 1 | 1 (100%) | 1 (100%) |
 | ReportingService | reporting | 8 | 2 (25%) | 2 (100%) |
 | SnapshotService | zfs.snapshot | 9 | 7 (78%) | 7 (100%) |
 | SystemService | system | 14 | 2 (14%) | 2 (100%) |
+| UserService | user | 13 | 5 (38%) | 5 (100%) |
 | VMService | vm, vm.device | 51 | 10 (20%) | 10 (100%) |
 | VirtService | virt.global, virt.instance | 18 | 12 (67%) | 12 (100%) |
 
@@ -207,6 +209,19 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | filesystem.stat | ✓ | Stat | ✓ | 4 |
 | filesystem.statfs |  |  |  |  |
 
+### GroupService — `group` (8 methods)
+
+| API Method | Implemented | Go Method | Tested | Tests |
+|------------|:-----------:|-----------|:------:|------:|
+| group.create | ✓ | Create | ✓ | 1 |
+| group.delete | ✓ | Delete | ✓ | 1 |
+| group.get_group_obj |  |  |  |  |
+| group.get_instance | ✓ | Get | ✓ | 2 |
+| group.get_next_gid |  |  |  |  |
+| group.has_password_enabled_user |  |  |  |  |
+| group.query | ✓ | List | ✓ | 1 |
+| group.update | ✓ | Update | ✓ | 1 |
+
 ### InterfaceService — `interface` (23 methods)
 
 | API Method | Implemented | Go Method | Tested | Tests |
@@ -286,6 +301,24 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | system.state |  |  |  |  |
 | system.version | ✓ | GetVersion | ✓ | 3 |
 | system.version_short |  |  |  |  |
+
+### UserService — `user` (13 methods)
+
+| API Method | Implemented | Go Method | Tested | Tests |
+|------------|:-----------:|-----------|:------:|------:|
+| user.create | ✓ | Create | ✓ | 1 |
+| user.delete | ✓ | Delete | ✓ | 1 |
+| user.get_instance | ✓ | Get | ✓ | 2 |
+| user.get_next_uid |  |  |  |  |
+| user.get_user_obj |  |  |  |  |
+| user.has_local_administrator_set_up |  |  |  |  |
+| user.query | ✓ | List | ✓ | 1 |
+| user.renew_2fa_secret |  |  |  |  |
+| user.set_password |  |  |  |  |
+| user.setup_local_administrator |  |  |  |  |
+| user.shell_choices |  |  |  |  |
+| user.unset_2fa_secret |  |  |  |  |
+| user.update | ✓ | Update | ✓ | 1 |
 
 ### VMService — `vm` (35 methods)
 
@@ -376,7 +409,7 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | virt.instance.stop | ✓ | StopInstance | ✓ | 3 |
 | virt.instance.update | ✓ | UpdateInstance | ✓ | 3 |
 
-## Uncovered Namespaces (95 namespaces, 512 methods)
+## Uncovered Namespaces (93 namespaces, 491 methods)
 
 | Namespace | Methods |
 |-----------|--------:|
@@ -409,7 +442,6 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | failover.reboot | 2 |
 | filesystem.acltemplate | 6 |
 | ftp | 2 |
-| group | 8 |
 | hardware.memory | 1 |
 | idmap | 8 |
 | initshutdownscript | 5 |
@@ -471,7 +503,6 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | tunable | 6 |
 | update | 10 |
 | ups | 4 |
-| user | 13 |
 | virt.device | 7 |
 | virt.volume | 7 |
 | vmware | 8 |
