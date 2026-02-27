@@ -94,6 +94,8 @@ Without a fallback, these operations return `client.ErrUnsupportedOperation`.
 | Cloud Sync | `CloudSyncServiceAPI` | `NewCloudSyncService(AsyncCaller, Version)` |
 | Cron Jobs | `CronServiceAPI` | `NewCronService(Caller, Version)` |
 | Filesystem | `FilesystemServiceAPI` | `NewFilesystemService(FileCaller, Version)` |
+| Groups | `GroupServiceAPI` | `NewGroupService(Caller, Version)` |
+| Users | `UserServiceAPI` | `NewUserService(Caller, Version)` |
 | VMs | `VMServiceAPI` | `NewVMService(AsyncCaller, Version)` |
 | Virt (Containers) | `VirtServiceAPI` | `NewVirtService(AsyncCaller, Version)` |
 
