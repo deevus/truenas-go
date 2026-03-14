@@ -10,7 +10,7 @@ type UserServiceAPI interface {
 	GetByUID(ctx context.Context, uid int64) (*User, error)
 	List(ctx context.Context) ([]User, error)
 	Update(ctx context.Context, id int64, opts UpdateUserOpts) (*User, error)
-	Delete(ctx context.Context, id int64) error
+	Delete(ctx context.Context, id int64, deleteGroup bool) error
 }
 
 // Compile-time checks.
@@ -25,7 +25,7 @@ type MockUserService struct {
 	GetByUIDFunc      func(ctx context.Context, uid int64) (*User, error)
 	ListFunc          func(ctx context.Context) ([]User, error)
 	UpdateFunc        func(ctx context.Context, id int64, opts UpdateUserOpts) (*User, error)
-	DeleteFunc        func(ctx context.Context, id int64) error
+	DeleteFunc        func(ctx context.Context, id int64, deleteGroup bool) error
 }
 
 func (m *MockUserService) Create(ctx context.Context, opts CreateUserOpts) (*User, error) {
@@ -70,9 +70,9 @@ func (m *MockUserService) Update(ctx context.Context, id int64, opts UpdateUserO
 	return nil, nil
 }
 
-func (m *MockUserService) Delete(ctx context.Context, id int64) error {
+func (m *MockUserService) Delete(ctx context.Context, id int64, deleteGroup bool) error {
 	if m.DeleteFunc != nil {
-		return m.DeleteFunc(ctx, id)
+		return m.DeleteFunc(ctx, id, deleteGroup)
 	}
 	return nil
 }

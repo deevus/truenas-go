@@ -572,7 +572,7 @@ func TestUserService_Delete(t *testing.T) {
 	}
 
 	svc := NewUserService(mock, Version{})
-	err := svc.Delete(context.Background(), 10)
+	err := svc.Delete(context.Background(), 10, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -686,7 +686,7 @@ func TestUserService_Delete_Error(t *testing.T) {
 	}
 
 	svc := NewUserService(mock, Version{})
-	err := svc.Delete(context.Background(), 1)
+	err := svc.Delete(context.Background(), 1, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}

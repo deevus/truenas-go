@@ -162,9 +162,11 @@ func (s *UserService) Update(ctx context.Context, id int64, opts UpdateUserOpts)
 	return s.Get(ctx, id)
 }
 
-// Delete deletes a user by ID. Also deletes the user's auto-created primary group.
-func (s *UserService) Delete(ctx context.Context, id int64) error {
-	_, err := s.client.Call(ctx, "user.delete", []any{id, map[string]any{"delete_group": true}})
+// Delete deletes a user by ID. Pass deleteGroup=true when the user was created
+// with group_create=true so the auto-created primary group is cleaned up;
+// pass false when the primary group is managed separately.
+func (s *UserService) Delete(ctx context.Context, id int64, deleteGroup bool) error {
+	_, err := s.client.Call(ctx, "user.delete", []any{id, map[string]any{"delete_group": deleteGroup}})
 	return err
 }
 
