@@ -73,7 +73,7 @@ type StopVMOpts struct {
 type DiskDevice struct {
 	Path                string
 	Type                string
-	IOType              string
+	IOType              *string
 	Serial              string
 	PhysicalSectorSize  *int64
 	Logical_Sector_Size *int64
@@ -84,7 +84,7 @@ type RawDevice struct {
 	Path                string
 	Type                string
 	Boot                bool
-	IOType              string
+	IOType              *string
 	Serial              string
 	Exists              bool
 	Size                *int64
@@ -359,7 +359,7 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 		if opts.Disk != nil {
 			setNonEmpty(attrs, "path", opts.Disk.Path)
 			setNonEmpty(attrs, "type", opts.Disk.Type)
-			setNonEmpty(attrs, "io_type", opts.Disk.IOType)
+			setNonNilString(attrs, "io_type", opts.Disk.IOType)
 			setNonEmpty(attrs, "serial", opts.Disk.Serial)
 			setNonNilInt(attrs, "physical_sectorsize", opts.Disk.PhysicalSectorSize)
 			setNonNilInt(attrs, "logical_sectorsize", opts.Disk.Logical_Sector_Size)
@@ -369,7 +369,7 @@ func deviceOptsToParams(opts CreateVMDeviceOpts) map[string]any {
 			setNonEmpty(attrs, "path", opts.Raw.Path)
 			setNonEmpty(attrs, "type", opts.Raw.Type)
 			attrs["boot"] = opts.Raw.Boot
-			setNonEmpty(attrs, "io_type", opts.Raw.IOType)
+			setNonNilString(attrs, "io_type", opts.Raw.IOType)
 			setNonEmpty(attrs, "serial", opts.Raw.Serial)
 			attrs["exists"] = opts.Raw.Exists
 			setNonNilInt(attrs, "size", opts.Raw.Size)
@@ -436,6 +436,13 @@ func setNonNilInt(m map[string]any, key string, value *int64) {
 	}
 }
 
+// setNonNilString sets a map key only if the value is non-nil.
+func setNonNilString(m map[string]any, key string, value *string) {
+	if value != nil {
+		m[key] = *value
+	}
+}
+
 // vmFromResponse converts a VMResponse to a user-facing VM.
 func vmFromResponse(resp VMResponse) VM {
 	cpuModel := ""
@@ -480,7 +487,7 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 		device.Disk = &DiskDevice{
 			Path:                stringFromMap(resp.Attributes, "path"),
 			Type:                stringFromMap(resp.Attributes, "type"),
-			IOType:              stringFromMap(resp.Attributes, "io_type"),
+			IOType:              strPtrFromMap(resp.Attributes, "io_type"),
 			Serial:              stringFromMap(resp.Attributes, "serial"),
 			PhysicalSectorSize:  intPtrFromMap(resp.Attributes, "physical_sectorsize"),
 			Logical_Sector_Size: intPtrFromMap(resp.Attributes, "logical_sectorsize"),
@@ -490,7 +497,7 @@ func vmDeviceFromResponse(resp VMDeviceResponse) VMDevice {
 			Path:                stringFromMap(resp.Attributes, "path"),
 			Type:                stringFromMap(resp.Attributes, "type"),
 			Boot:                boolFromMap(resp.Attributes, "boot"),
-			IOType:              stringFromMap(resp.Attributes, "io_type"),
+			IOType:              strPtrFromMap(resp.Attributes, "io_type"),
 			Serial:              stringFromMap(resp.Attributes, "serial"),
 			Exists:              boolFromMap(resp.Attributes, "exists"),
 			Size:                intPtrFromMap(resp.Attributes, "size"),
@@ -545,6 +552,19 @@ func stringFromMap(m map[string]any, key string) string {
 		return ""
 	}
 	return s
+}
+
+// strPtrFromMap extracts a *string value from a map. Returns nil if the key is absent or null.
+func strPtrFromMap(m map[string]any, key string) *string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return nil
+	}
+	return &s
 }
 
 // boolFromMap extracts a bool value from a map.

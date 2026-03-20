@@ -236,3 +236,128 @@ func TestSetNonNilInt(t *testing.T) {
 		t.Error("expected key2 to be absent for nil")
 	}
 }
+
+func TestSetNonNilString(t *testing.T) {
+	m := map[string]any{}
+	val := "test-value"
+	setNonNilString(m, "key1", &val)
+	setNonNilString(m, "key2", nil)
+
+	if m["key1"] != "test-value" {
+		t.Errorf("expected key1=test-value, got %v", m["key1"])
+	}
+	if _, ok := m["key2"]; ok {
+		t.Error("expected key2 to be absent for nil")
+	}
+}
+
+func TestStrPtrFromMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		m       map[string]any
+		key     string
+		wantNil bool
+		want    string
+	}{
+		{"existing string", map[string]any{"key": "value"}, "key", false, "value"},
+		{"missing key", map[string]any{}, "key", true, ""},
+		{"nil value", map[string]any{"key": nil}, "key", true, ""},
+		{"non-string value", map[string]any{"key": 123}, "key", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := strPtrFromMap(tt.m, tt.key)
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("strPtrFromMap() = %v, want nil", *got)
+				}
+			} else {
+				if got == nil {
+					t.Fatal("strPtrFromMap() = nil, want non-nil")
+				}
+				if *got != tt.want {
+					t.Errorf("strPtrFromMap() = %q, want %q", *got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestDeviceOptsToParams_Disk_IOType(t *testing.T) {
+	t.Run("IOType set", func(t *testing.T) {
+		ioType := "NATIVE"
+		opts := CreateVMDeviceOpts{
+			VM:         1,
+			DeviceType: DeviceTypeDisk,
+			Disk: &DiskDevice{
+				Path:   "/dev/zvol/tank/vm-disk",
+				IOType: &ioType,
+			},
+		}
+
+		params := deviceOptsToParams(opts)
+		attrs := params["attributes"].(map[string]any)
+
+		if attrs["io_type"] != "NATIVE" {
+			t.Errorf("expected io_type=NATIVE, got %v", attrs["io_type"])
+		}
+	})
+
+	t.Run("IOType nil", func(t *testing.T) {
+		opts := CreateVMDeviceOpts{
+			VM:         1,
+			DeviceType: DeviceTypeDisk,
+			Disk: &DiskDevice{
+				Path:   "/dev/zvol/tank/vm-disk",
+				IOType: nil,
+			},
+		}
+
+		params := deviceOptsToParams(opts)
+		attrs := params["attributes"].(map[string]any)
+
+		if _, ok := attrs["io_type"]; ok {
+			t.Error("expected io_type to be absent when nil")
+		}
+	})
+}
+
+func TestDeviceOptsToParams_RAW_IOType(t *testing.T) {
+	t.Run("IOType set", func(t *testing.T) {
+		ioType := "NATIVE"
+		opts := CreateVMDeviceOpts{
+			VM:         1,
+			DeviceType: DeviceTypeRaw,
+			Raw: &RawDevice{
+				Path:   "/dev/zvol/tank/vm-disk",
+				IOType: &ioType,
+			},
+		}
+
+		params := deviceOptsToParams(opts)
+		attrs := params["attributes"].(map[string]any)
+
+		if attrs["io_type"] != "NATIVE" {
+			t.Errorf("expected io_type=NATIVE, got %v", attrs["io_type"])
+		}
+	})
+
+	t.Run("IOType nil", func(t *testing.T) {
+		opts := CreateVMDeviceOpts{
+			VM:         1,
+			DeviceType: DeviceTypeRaw,
+			Raw: &RawDevice{
+				Path:   "/dev/zvol/tank/vm-disk",
+				IOType: nil,
+			},
+		}
+
+		params := deviceOptsToParams(opts)
+		attrs := params["attributes"].(map[string]any)
+
+		if _, ok := attrs["io_type"]; ok {
+			t.Error("expected io_type to be absent when nil")
+		}
+	})
+}

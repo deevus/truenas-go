@@ -97,6 +97,37 @@ func TestVMDeviceFromResponse_Disk(t *testing.T) {
 	if device.Disk.PhysicalSectorSize != nil {
 		t.Errorf("expected nil PhysicalSectorSize, got %v", device.Disk.PhysicalSectorSize)
 	}
+	if device.Disk.IOType != nil {
+		t.Errorf("expected nil IOType when absent, got %v", device.Disk.IOType)
+	}
+}
+
+func TestVMDeviceFromResponse_Disk_WithIOType(t *testing.T) {
+	resp := VMDeviceResponse{
+		ID:    10,
+		VM:    1,
+		Order: 1001,
+		Attributes: map[string]any{
+			"dtype":   "DISK",
+			"path":    "/dev/zvol/tank/vm-disk",
+			"type":    "VIRTIO",
+			"io_type": "NATIVE",
+		},
+	}
+
+	device := vmDeviceFromResponse(resp)
+	if device.DeviceType != DeviceTypeDisk {
+		t.Errorf("expected DISK, got %s", device.DeviceType)
+	}
+	if device.Disk == nil {
+		t.Fatal("expected non-nil Disk")
+	}
+	if device.Disk.IOType == nil {
+		t.Fatal("expected non-nil IOType")
+	}
+	if *device.Disk.IOType != "NATIVE" {
+		t.Errorf("expected IOType NATIVE, got %s", *device.Disk.IOType)
+	}
 }
 
 func TestVMDeviceFromResponse_Raw(t *testing.T) {
@@ -125,6 +156,36 @@ func TestVMDeviceFromResponse_Raw(t *testing.T) {
 	}
 	if device.Raw.Size == nil || *device.Raw.Size != 10737418240 {
 		t.Errorf("expected size 10737418240, got %v", device.Raw.Size)
+	}
+}
+
+func TestVMDeviceFromResponse_RAW_WithIOType(t *testing.T) {
+	resp := VMDeviceResponse{
+		ID:    10,
+		VM:    1,
+		Order: 1001,
+		Attributes: map[string]any{
+			"dtype":   "RAW",
+			"path":    "/mnt/tank/vm/raw.img",
+			"type":    "VIRTIO",
+			"boot":    true,
+			"size":    float64(10737418240),
+			"io_type": "NATIVE",
+		},
+	}
+
+	device := vmDeviceFromResponse(resp)
+	if device.DeviceType != DeviceTypeRaw {
+		t.Errorf("expected RAW, got %s", device.DeviceType)
+	}
+	if device.Raw == nil {
+		t.Fatal("expected non-nil Raw")
+	}
+	if device.Raw.IOType == nil {
+		t.Fatal("expected non-nil IOType")
+	}
+	if *device.Raw.IOType != "NATIVE" {
+		t.Errorf("expected IOType NATIVE, got %s", *device.Raw.IOType)
 	}
 }
 
