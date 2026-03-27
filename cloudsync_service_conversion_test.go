@@ -89,6 +89,40 @@ func TestCredentialFromResponse_GCS(t *testing.T) {
 	}
 }
 
+func TestCredentialFromResponse_WebDAV(t *testing.T) {
+	resp := CloudSyncCredentialResponse{
+		ID:   1,
+		Name: "WebDAV Cred",
+		Provider: CloudSyncCredentialProvider{
+			Type:   "WEBDAV",
+			Url:    "https://webdav.example.com",
+			Vendor: "example",
+			User:   "someuser",
+			Pass:   "somepass",
+		},
+	}
+
+	cred := credentialFromResponse(resp)
+	if cred.ID != 1 {
+		t.Errorf("expected ID 1, got %d", cred.ID)
+	}
+	if cred.ProviderType != "WEBDAV" {
+		t.Errorf("expected provider type WEBDAV, got %s", cred.ProviderType)
+	}
+	if cred.Attributes["url"] != "https://webdav.example.com" {
+		t.Errorf("expected url https://webdav.example.com, got %s", cred.Attributes["access_key_id"])
+	}
+	if cred.Attributes["vendor"] != "example" {
+		t.Errorf("expected vendor example, got %s", cred.Attributes["secret_access_key"])
+	}
+	if cred.Attributes["user"] != "someuser" {
+		t.Errorf("expected user someuser, got %s", cred.Attributes["endpoint"])
+	}
+	if cred.Attributes["pass"] != "somepass" {
+		t.Errorf("expected pass somepass, got %s", cred.Attributes["region"])
+	}
+}
+
 func TestCredentialFromResponse_EmptyProvider(t *testing.T) {
 	resp := CloudSyncCredentialResponse{
 		ID:   4,

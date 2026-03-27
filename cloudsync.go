@@ -25,6 +25,11 @@ type CloudSyncCredentialProvider struct {
 	Key     string `json:"key,omitempty"`
 	// GCS attributes
 	ServiceAccountCredentials string `json:"service_account_credentials,omitempty"`
+	// WebDAV attributes
+	Url    string `json:"url,omitempty"`
+	Vendor string `json:"vendor,omitempty"`
+	User   string `json:"user,omitempty"`
+	Pass   string `json:"pass,omitempty"`
 }
 
 // CloudSyncTaskCredentialRef is a minimal struct for embedded credential references in tasks.
