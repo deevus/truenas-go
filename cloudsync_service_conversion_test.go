@@ -95,7 +95,7 @@ func TestCredentialFromResponse_WebDAV(t *testing.T) {
 		Name: "WebDAV Cred",
 		Provider: CloudSyncCredentialProvider{
 			Type:   "WEBDAV",
-			Url:    "https://webdav.example.com",
+			URL:    "https://webdav.example.com",
 			Vendor: "example",
 			User:   "someuser",
 			Pass:   "somepass",
@@ -110,16 +110,16 @@ func TestCredentialFromResponse_WebDAV(t *testing.T) {
 		t.Errorf("expected provider type WEBDAV, got %s", cred.ProviderType)
 	}
 	if cred.Attributes["url"] != "https://webdav.example.com" {
-		t.Errorf("expected url https://webdav.example.com, got %s", cred.Attributes["access_key_id"])
+		t.Errorf("expected url https://webdav.example.com, got %s", cred.Attributes["url"])
 	}
 	if cred.Attributes["vendor"] != "example" {
-		t.Errorf("expected vendor example, got %s", cred.Attributes["secret_access_key"])
+		t.Errorf("expected vendor example, got %s", cred.Attributes["vendor"])
 	}
 	if cred.Attributes["user"] != "someuser" {
-		t.Errorf("expected user someuser, got %s", cred.Attributes["endpoint"])
+		t.Errorf("expected user someuser, got %s", cred.Attributes["user"])
 	}
 	if cred.Attributes["pass"] != "somepass" {
-		t.Errorf("expected pass somepass, got %s", cred.Attributes["region"])
+		t.Errorf("expected pass somepass, got %s", cred.Attributes["pass"])
 	}
 }
 

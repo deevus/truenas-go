@@ -26,7 +26,7 @@ type CloudSyncCredentialProvider struct {
 	// GCS attributes
 	ServiceAccountCredentials string `json:"service_account_credentials,omitempty"`
 	// WebDAV attributes
-	Url    string `json:"url,omitempty"`
+	URL    string `json:"url,omitempty"`
 	Vendor string `json:"vendor,omitempty"`
 	User   string `json:"user,omitempty"`
 	Pass   string `json:"pass,omitempty"`

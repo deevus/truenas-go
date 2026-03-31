@@ -257,7 +257,7 @@ func credentialFromResponse(resp CloudSyncCredentialResponse) CloudSyncCredentia
 	addIfNonEmpty(attrs, "account", resp.Provider.Account)
 	addIfNonEmpty(attrs, "key", resp.Provider.Key)
 	addIfNonEmpty(attrs, "service_account_credentials", resp.Provider.ServiceAccountCredentials)
-	addIfNonEmpty(attrs, "url", resp.Provider.Url)
+	addIfNonEmpty(attrs, "url", resp.Provider.URL)
 	addIfNonEmpty(attrs, "vendor", resp.Provider.Vendor)
 	addIfNonEmpty(attrs, "user", resp.Provider.User)
 	addIfNonEmpty(attrs, "pass", resp.Provider.Pass)
