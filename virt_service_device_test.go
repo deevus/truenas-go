@@ -118,25 +118,27 @@ func TestVirtService_ListDevices_ParseError(t *testing.T) {
 
 func TestVirtService_AddDevice_Disk(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			if method != "virt.instance.device_add" {
-				t.Errorf("expected method virt.instance.device_add, got %s", method)
-			}
-			slice := params.([]any)
-			if slice[0] != "myvm" {
-				t.Errorf("expected instanceID myvm, got %v", slice[0])
-			}
-			dev := slice[1].(map[string]any)
-			if dev["dev_type"] != "DISK" {
-				t.Errorf("expected dev_type DISK, got %v", dev["dev_type"])
-			}
-			if dev["source"] != "/mnt/tank/data" {
-				t.Errorf("expected source /mnt/tank/data, got %v", dev["source"])
-			}
-			if dev["destination"] != "/data" {
-				t.Errorf("expected destination /data, got %v", dev["destination"])
-			}
-			return nil, nil
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				if method != "virt.instance.device_add" {
+					t.Errorf("expected method virt.instance.device_add, got %s", method)
+				}
+				slice := params.([]any)
+				if slice[0] != "myvm" {
+					t.Errorf("expected instanceID myvm, got %v", slice[0])
+				}
+				dev := slice[1].(map[string]any)
+				if dev["dev_type"] != "DISK" {
+					t.Errorf("expected dev_type DISK, got %v", dev["dev_type"])
+				}
+				if dev["source"] != "/mnt/tank/data" {
+					t.Errorf("expected source /mnt/tank/data, got %v", dev["source"])
+				}
+				if dev["destination"] != "/data" {
+					t.Errorf("expected destination /data, got %v", dev["destination"])
+				}
+				return json.RawMessage(`true`), nil
+			},
 		},
 	}
 
@@ -153,22 +155,24 @@ func TestVirtService_AddDevice_Disk(t *testing.T) {
 
 func TestVirtService_AddDevice_NIC(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			slice := params.([]any)
-			dev := slice[1].(map[string]any)
-			if dev["dev_type"] != "NIC" {
-				t.Errorf("expected dev_type NIC, got %v", dev["dev_type"])
-			}
-			if dev["network"] != "br0" {
-				t.Errorf("expected network br0, got %v", dev["network"])
-			}
-			if dev["nic_type"] != "BRIDGED" {
-				t.Errorf("expected nic_type BRIDGED, got %v", dev["nic_type"])
-			}
-			if dev["parent"] != "enp0s3" {
-				t.Errorf("expected parent enp0s3, got %v", dev["parent"])
-			}
-			return nil, nil
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				slice := params.([]any)
+				dev := slice[1].(map[string]any)
+				if dev["dev_type"] != "NIC" {
+					t.Errorf("expected dev_type NIC, got %v", dev["dev_type"])
+				}
+				if dev["network"] != "br0" {
+					t.Errorf("expected network br0, got %v", dev["network"])
+				}
+				if dev["nic_type"] != "BRIDGED" {
+					t.Errorf("expected nic_type BRIDGED, got %v", dev["nic_type"])
+				}
+				if dev["parent"] != "enp0s3" {
+					t.Errorf("expected parent enp0s3, got %v", dev["parent"])
+				}
+				return json.RawMessage(`true`), nil
+			},
 		},
 	}
 
@@ -187,25 +191,27 @@ func TestVirtService_AddDevice_NIC(t *testing.T) {
 
 func TestVirtService_AddDevice_Proxy(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			slice := params.([]any)
-			dev := slice[1].(map[string]any)
-			if dev["dev_type"] != "PROXY" {
-				t.Errorf("expected dev_type PROXY, got %v", dev["dev_type"])
-			}
-			if dev["source_proto"] != "TCP" {
-				t.Errorf("expected source_proto TCP, got %v", dev["source_proto"])
-			}
-			if dev["source_port"] != int64(8080) {
-				t.Errorf("expected source_port 8080, got %v", dev["source_port"])
-			}
-			if dev["dest_proto"] != "TCP" {
-				t.Errorf("expected dest_proto TCP, got %v", dev["dest_proto"])
-			}
-			if dev["dest_port"] != int64(80) {
-				t.Errorf("expected dest_port 80, got %v", dev["dest_port"])
-			}
-			return nil, nil
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				slice := params.([]any)
+				dev := slice[1].(map[string]any)
+				if dev["dev_type"] != "PROXY" {
+					t.Errorf("expected dev_type PROXY, got %v", dev["dev_type"])
+				}
+				if dev["source_proto"] != "TCP" {
+					t.Errorf("expected source_proto TCP, got %v", dev["source_proto"])
+				}
+				if dev["source_port"] != int64(8080) {
+					t.Errorf("expected source_port 8080, got %v", dev["source_port"])
+				}
+				if dev["dest_proto"] != "TCP" {
+					t.Errorf("expected dest_proto TCP, got %v", dev["dest_proto"])
+				}
+				if dev["dest_port"] != int64(80) {
+					t.Errorf("expected dest_port 80, got %v", dev["dest_port"])
+				}
+				return json.RawMessage(`true`), nil
+			},
 		},
 	}
 
@@ -224,8 +230,10 @@ func TestVirtService_AddDevice_Proxy(t *testing.T) {
 
 func TestVirtService_AddDevice_Error(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("device add failed")
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("device add failed")
+			},
 		},
 	}
 
@@ -236,20 +244,53 @@ func TestVirtService_AddDevice_Error(t *testing.T) {
 	}
 }
 
+// TestVirtService_AddDevice_UsesCallNotCallAndWait verifies that AddDevice uses
+// the synchronous Caller interface (Call), not the async CallAndWait.
+// virt.instance.device_add is synchronous on TrueNAS — it returns True immediately
+// without creating a job. Using CallAndWait causes midclt -j to hang indefinitely
+// on TrueNAS 25.x because it waits for a job that is never created.
+func TestVirtService_AddDevice_UsesCallNotCallAndWait(t *testing.T) {
+	callAndWaitCalled := false
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return json.RawMessage(`true`), nil
+			},
+		},
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callAndWaitCalled = true
+			return nil, nil
+		},
+	}
+
+	svc := NewVirtService(mock, Version{})
+	err := svc.AddDevice(context.Background(), "myvm", VirtDeviceOpts{DevType: "DISK"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callAndWaitCalled {
+		t.Error("AddDevice should use Call (synchronous), not CallAndWait (job-based); " +
+			"virt.instance.device_add is synchronous and does not create a job. " +
+			"CallAndWait causes midclt -j to hang indefinitely on TrueNAS 25.x")
+	}
+}
+
 func TestVirtService_DeleteDevice(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			if method != "virt.instance.device_delete" {
-				t.Errorf("expected method virt.instance.device_delete, got %s", method)
-			}
-			slice := params.([]any)
-			if slice[0] != "myvm" {
-				t.Errorf("expected instanceID myvm, got %v", slice[0])
-			}
-			if slice[1] != "data" {
-				t.Errorf("expected deviceName data, got %v", slice[1])
-			}
-			return nil, nil
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				if method != "virt.instance.device_delete" {
+					t.Errorf("expected method virt.instance.device_delete, got %s", method)
+				}
+				slice := params.([]any)
+				if slice[0] != "myvm" {
+					t.Errorf("expected instanceID myvm, got %v", slice[0])
+				}
+				if slice[1] != "data" {
+					t.Errorf("expected deviceName data, got %v", slice[1])
+				}
+				return json.RawMessage(`true`), nil
+			},
 		},
 	}
 
@@ -262,8 +303,10 @@ func TestVirtService_DeleteDevice(t *testing.T) {
 
 func TestVirtService_DeleteDevice_Error(t *testing.T) {
 	mock := &mockAsyncCaller{
-		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
-			return nil, errors.New("device delete failed")
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return nil, errors.New("device delete failed")
+			},
 		},
 	}
 
@@ -271,5 +314,33 @@ func TestVirtService_DeleteDevice_Error(t *testing.T) {
 	err := svc.DeleteDevice(context.Background(), "myvm", "data")
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// TestVirtService_DeleteDevice_UsesCallNotCallAndWait verifies that DeleteDevice
+// uses the synchronous Caller interface, for the same reason as AddDevice.
+func TestVirtService_DeleteDevice_UsesCallNotCallAndWait(t *testing.T) {
+	callAndWaitCalled := false
+	mock := &mockAsyncCaller{
+		mockCaller: mockCaller{
+			callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+				return json.RawMessage(`true`), nil
+			},
+		},
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callAndWaitCalled = true
+			return nil, nil
+		},
+	}
+
+	svc := NewVirtService(mock, Version{})
+	err := svc.DeleteDevice(context.Background(), "myvm", "data")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callAndWaitCalled {
+		t.Error("DeleteDevice should use Call (synchronous), not CallAndWait (job-based); " +
+			"virt.instance.device_delete is synchronous and does not create a job. " +
+			"CallAndWait causes midclt -j to hang indefinitely on TrueNAS 25.x")
 	}
 }

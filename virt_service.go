@@ -264,13 +264,13 @@ func (s *VirtService) ListDevices(ctx context.Context, instanceID string) ([]Vir
 // AddDevice adds a device to a virt instance.
 func (s *VirtService) AddDevice(ctx context.Context, instanceID string, opts VirtDeviceOpts) error {
 	devMap := virtDeviceOptToParam(opts)
-	_, err := s.client.CallAndWait(ctx, "virt.instance.device_add", []any{instanceID, devMap})
+	_, err := s.client.Call(ctx, "virt.instance.device_add", []any{instanceID, devMap})
 	return err
 }
 
 // DeleteDevice removes a device from a virt instance by device name.
 func (s *VirtService) DeleteDevice(ctx context.Context, instanceID string, deviceName string) error {
-	_, err := s.client.CallAndWait(ctx, "virt.instance.device_delete", []any{instanceID, deviceName})
+	_, err := s.client.Call(ctx, "virt.instance.device_delete", []any{instanceID, deviceName})
 	return err
 }
 
