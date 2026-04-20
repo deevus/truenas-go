@@ -66,7 +66,7 @@ func TestAppService_CreateApp_Error(t *testing.T) {
 	}}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-app"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-app", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -89,7 +89,7 @@ func TestAppService_CreateApp_NotFoundAfterCreate(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "ghost-app"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "ghost-app", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error for not found after create")
 	}
@@ -109,7 +109,7 @@ func TestAppService_CreateApp_ParseError(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	_, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "parse-fail"})
+	_, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "parse-fail", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected parse error")
 	}
@@ -589,7 +589,7 @@ func TestAppService_CreateApp_ReReadError(t *testing.T) {
 	}
 
 	svc := NewAppService(mock, Version{})
-	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-reread"})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{Name: "fail-reread", CustomApp: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -615,5 +615,128 @@ func TestAppService_UpdateApp_ReReadError(t *testing.T) {
 	}
 	if app != nil {
 		t.Error("expected nil app on re-read error")
+	}
+}
+
+func TestAppService_CreateApp_CatalogApp(t *testing.T) {
+	var capturedMethod string
+	var capturedParams any
+
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			capturedMethod = method
+			capturedParams = params
+			return nil, nil
+		},
+	}}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return sampleCatalogAppJSON(), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	app, err := svc.CreateApp(context.Background(), CreateAppOpts{
+		Name:       "tailscale",
+		CatalogApp: "tailscale",
+		Train:      "community",
+		Values:     map[string]any{"tailscale": map[string]any{"auth_key": "tskey-xxx"}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if app == nil {
+		t.Fatal("expected non-nil app")
+	}
+
+	// Verify create method
+	if capturedMethod != "app.create" {
+		t.Errorf("expected method app.create, got %s", capturedMethod)
+	}
+
+	// Verify create params include catalog fields
+	p, ok := capturedParams.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any params, got %T", capturedParams)
+	}
+	if p["catalog_app"] != "tailscale" {
+		t.Errorf("expected catalog_app 'tailscale', got %v", p["catalog_app"])
+	}
+	if p["train"] != "community" {
+		t.Errorf("expected train 'community', got %v", p["train"])
+	}
+	if p["custom_app"] != false {
+		t.Errorf("expected custom_app false, got %v", p["custom_app"])
+	}
+	values, ok := p["values"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected values map, got %T", p["values"])
+	}
+	ts, ok := values["tailscale"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected tailscale values map, got %T", values["tailscale"])
+	}
+	if ts["auth_key"] != "tskey-xxx" {
+		t.Errorf("expected auth_key 'tskey-xxx', got %v", ts["auth_key"])
+	}
+
+	// Verify re-read populated catalog metadata
+	if app.CatalogApp != "tailscale" {
+		t.Errorf("expected CatalogApp 'tailscale', got %q", app.CatalogApp)
+	}
+	if app.Train != "community" {
+		t.Errorf("expected Train 'community', got %q", app.Train)
+	}
+	if app.CustomApp {
+		t.Error("expected CustomApp false")
+	}
+	if app.Version != "1.3.32" {
+		t.Errorf("expected Version '1.3.32', got %q", app.Version)
+	}
+}
+
+func TestAppService_UpdateApp_CatalogAppValues(t *testing.T) {
+	var capturedParams any
+
+	mock := &mockSubscribeCaller{mockAsyncCaller: mockAsyncCaller{
+		callAndWaitFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			if method != "app.update" {
+				t.Errorf("expected method app.update, got %s", method)
+			}
+			capturedParams = params
+			return nil, nil
+		},
+	}}
+	mock.callFunc = func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+		return sampleCatalogAppJSON(), nil
+	}
+
+	svc := NewAppService(mock, Version{})
+	app, err := svc.UpdateApp(context.Background(), "tailscale", UpdateAppOpts{
+		Values: map[string]any{"TZ": "America/New_York"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if app == nil {
+		t.Fatal("expected non-nil app")
+	}
+
+	// Verify update params contain values
+	slice, ok := capturedParams.([]any)
+	if !ok || len(slice) != 2 {
+		t.Fatalf("expected [name, params] slice, got %T", capturedParams)
+	}
+	if slice[0] != "tailscale" {
+		t.Errorf("expected name 'tailscale', got %v", slice[0])
+	}
+	updateMap, ok := slice[1].(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any update params, got %T", slice[1])
+	}
+	values, ok := updateMap["values"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected values map in update params, got %v", updateMap)
+	}
+	if values["TZ"] != "America/New_York" {
+		t.Errorf("expected TZ 'America/New_York', got %v", values["TZ"])
 	}
 }
