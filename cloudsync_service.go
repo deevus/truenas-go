@@ -46,6 +46,8 @@ type CloudSyncTask struct {
 	Attributes         map[string]any
 	Exclude            []string
 	Include            []string
+	PreScript          string
+	PostScript         string
 }
 
 // CreateCloudSyncTaskOpts contains options for creating a cloud sync task.
@@ -69,6 +71,8 @@ type CreateCloudSyncTaskOpts struct {
 	Attributes         map[string]any
 	Exclude            []string
 	Include            []string
+	PreScript          string
+	PostScript         string
 }
 
 // UpdateCloudSyncTaskOpts contains options for updating a cloud sync task.
@@ -335,6 +339,14 @@ func taskOptsToParams(opts CreateCloudSyncTaskOpts) map[string]any {
 		params["include"] = opts.Include
 	}
 
+	if len(opts.PreScript) > 0 {
+		params["pre_script"] = opts.PreScript
+	}
+
+	if len(opts.PostScript) > 0 {
+		params["post_script"] = opts.PostScript
+	}
+
 	return params
 }
 
@@ -363,8 +375,10 @@ func taskFromResponse(resp CloudSyncTaskResponse) CloudSyncTask {
 			Month:  resp.Schedule.Month,
 			Dow:    resp.Schedule.Dow,
 		},
-		Exclude: resp.Exclude,
-		Include: resp.Include,
+		Exclude:    resp.Exclude,
+		Include:    resp.Include,
+		PreScript:  resp.PreScript,
+		PostScript: resp.PostScript,
 	}
 
 	// Handle attributes - can be false in API response, so ignore unmarshal errors

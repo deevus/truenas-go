@@ -53,7 +53,9 @@ func sampleTaskJSON() json.RawMessage {
 		"include": [],
 		"follow_symlinks": false,
 		"create_empty_src_dirs": true,
-		"enabled": true
+		"enabled": true,
+		"pre_script": "pre_script test",
+		"post_script": "post_script test"
 	}]`)
 }
 
@@ -78,6 +80,8 @@ func sampleTaskFalseAttrsJSON() json.RawMessage {
 		"include": ["*.dat"],
 		"follow_symlinks": true,
 		"create_empty_src_dirs": false,
-		"enabled": false
+		"enabled": false,
+		"pre_script": "",
+		"post_script": ""
 	}]`)
 }
