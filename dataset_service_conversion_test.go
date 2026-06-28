@@ -14,6 +14,7 @@ func TestDatasetFromResponse(t *testing.T) {
 		Quota:       SizePropertyField{Parsed: 2147483648, Value: "2G"},
 		RefQuota:    SizePropertyField{Parsed: 1073741824, Value: "1G"},
 		Atime:       PropertyValue{Value: "off"},
+		Recordsize:  PropertyValue{Value: "1M"},
 	}
 
 	ds := datasetFromResponse(resp)
@@ -44,6 +45,9 @@ func TestDatasetFromResponse(t *testing.T) {
 	}
 	if ds.Atime != "off" {
 		t.Errorf("expected Atime off, got %s", ds.Atime)
+	}
+	if ds.Recordsize != "1M" {
+		t.Errorf("expected Recordsize 1M, got %s", ds.Recordsize)
 	}
 }
 
@@ -136,6 +140,7 @@ func TestDatasetCreateParams(t *testing.T) {
 		Quota:       1073741824,
 		RefQuota:    536870912,
 		Atime:       "on",
+		Recordsize:  "1M",
 	}
 
 	params := datasetCreateParams(opts)
@@ -160,6 +165,9 @@ func TestDatasetCreateParams(t *testing.T) {
 	}
 	if params["atime"] != "on" {
 		t.Errorf("expected atime on, got %v", params["atime"])
+	}
+	if params["recordsize"] != "1M" {
+		t.Errorf("expected recordsize 1M, got %v", params["recordsize"])
 	}
 }
 
@@ -191,6 +199,9 @@ func TestDatasetCreateParams_Minimal(t *testing.T) {
 	if _, ok := params["atime"]; ok {
 		t.Error("expected no atime key")
 	}
+	if _, ok := params["recordsize"]; ok {
+		t.Error("expected no recordsize key")
+	}
 }
 
 func TestDatasetUpdateParams(t *testing.T) {
@@ -199,6 +210,7 @@ func TestDatasetUpdateParams(t *testing.T) {
 		Quota:       Int64Ptr(2147483648),
 		RefQuota:    Int64Ptr(1073741824),
 		Atime:       "off",
+		Recordsize:  "1M",
 		Comments:    StringPtr("updated"),
 	}
 
@@ -215,6 +227,9 @@ func TestDatasetUpdateParams(t *testing.T) {
 	}
 	if params["atime"] != "off" {
 		t.Errorf("expected atime off, got %v", params["atime"])
+	}
+	if params["recordsize"] != "1M" {
+		t.Errorf("expected recordsize 1M, got %v", params["recordsize"])
 	}
 	if params["comments"] != "updated" {
 		t.Errorf("expected comments updated, got %v", params["comments"])
@@ -256,6 +271,21 @@ func TestDatasetUpdateParams_CompressionAndAtime(t *testing.T) {
 	}
 	if len(params) != 2 {
 		t.Errorf("expected 2 params, got %d", len(params))
+	}
+}
+
+func TestDatasetUpdateParams_Recordsize(t *testing.T) {
+	opts := UpdateDatasetOpts{
+		Recordsize: "1M",
+	}
+
+	params := datasetUpdateParams(opts)
+
+	if params["recordsize"] != "1M" {
+		t.Errorf("expected recordsize 1M, got %v", params["recordsize"])
+	}
+	if len(params) != 1 {
+		t.Errorf("expected 1 param, got %d", len(params))
 	}
 }
 
