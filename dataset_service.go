@@ -17,6 +17,7 @@ type Dataset struct {
 	Quota       int64
 	RefQuota    int64
 	Atime       string
+	Recordsize  string
 	Used        int64
 	Available   int64
 }
@@ -29,6 +30,7 @@ type CreateDatasetOpts struct {
 	Quota       int64
 	RefQuota    int64
 	Atime       string
+	Recordsize  string
 }
 
 // UpdateDatasetOpts contains options for updating a filesystem dataset.
@@ -39,6 +41,7 @@ type UpdateDatasetOpts struct {
 	Quota       *int64
 	RefQuota    *int64
 	Atime       string // Empty = don't change
+	Recordsize  string // Empty = don't change
 	Comments    *string
 }
 
@@ -278,6 +281,7 @@ func datasetFromResponse(resp DatasetResponse) Dataset {
 		Quota:       resp.Quota.Parsed,
 		RefQuota:    resp.RefQuota.Parsed,
 		Atime:       resp.Atime.Value,
+		Recordsize:  resp.Recordsize.Value,
 		Used:        resp.Used.Parsed,
 		Available:   resp.Available.Parsed,
 	}

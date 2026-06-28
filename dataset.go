@@ -12,6 +12,7 @@ type DatasetResponse struct {
 	Quota        SizePropertyField `json:"quota"`
 	RefQuota     SizePropertyField `json:"refquota"`
 	Atime        PropertyValue     `json:"atime"`
+	Recordsize   PropertyValue     `json:"recordsize"`
 	Volsize      SizePropertyField `json:"volsize"`
 	Volblocksize PropertyValue     `json:"volblocksize"`
 	Sparse       PropertyValue     `json:"sparse"`
