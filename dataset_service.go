@@ -335,6 +335,9 @@ func datasetCreateParams(opts CreateDatasetOpts) map[string]any {
 	if opts.Atime != "" {
 		params["atime"] = opts.Atime
 	}
+	if opts.Recordsize != "" {
+		params["recordsize"] = opts.Recordsize
+	}
 	return params
 }
 
@@ -352,6 +355,9 @@ func datasetUpdateParams(opts UpdateDatasetOpts) map[string]any {
 	}
 	if opts.Atime != "" {
 		params["atime"] = opts.Atime
+	}
+	if opts.Recordsize != "" {
+		params["recordsize"] = opts.Recordsize
 	}
 	if opts.Comments != nil {
 		params["comments"] = *opts.Comments
