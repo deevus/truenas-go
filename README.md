@@ -96,6 +96,7 @@ Without a fallback, these operations return `client.ErrUnsupportedOperation`.
 | Filesystem | `FilesystemServiceAPI` | `NewFilesystemService(FileCaller, Version)` |
 | VMs | `VMServiceAPI` | `NewVMService(AsyncCaller, Version)` |
 | Virt (Containers) | `VirtServiceAPI` | `NewVirtService(AsyncCaller, Version)` |
+| SSH | `SSHServiceAPI` | `NewSSHService(AsyncCaller, Version)` |
 
 For the full per-method breakdown of which API endpoints are implemented and tested, see the [Feature Matrix](FEATURES.md). The library currently targets the latest stable release, **TrueNAS 25.04**.
 

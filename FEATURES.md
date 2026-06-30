@@ -2,7 +2,7 @@
 
 TrueNAS version: 25.04
 
-Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemented)
+Total API methods: 771 | Implemented: 78 (10.1%) | Tested: 78 (100.0% of implemented)
 
 ## Covered Namespaces
 
@@ -17,6 +17,7 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | InterfaceService | interface | 23 | 1 (4%) | 1 (100%) |
 | NetworkService | network.general | 1 | 1 (100%) | 1 (100%) |
 | ReportingService | reporting | 8 | 2 (25%) | 2 (100%) |
+| SSHService | keychaincredential | 10 | 4 (40%) | 4 (100%) |
 | SnapshotService | zfs.snapshot | 9 | 7 (78%) | 7 (100%) |
 | SystemService | system | 14 | 2 (14%) | 2 (100%) |
 | VMService | vm, vm.device | 51 | 10 (20%) | 10 (100%) |
@@ -254,6 +255,21 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | reporting.netdata_graphs | ✓ | ListGraphs | ✓ | 4 |
 | reporting.update |  |  |  |  |
 
+### SSHService — `keychaincredential` (10 methods)
+
+| API Method | Implemented | Go Method | Tested | Tests |
+|------------|:-----------:|-----------|:------:|------:|
+| keychaincredential.create | ✓ | CreateSSHKeyPair, CreateSSHConnection | ✓ | 6 |
+| keychaincredential.delete | ✓ | DeleteSSHKeyPair, DeleteSSHConnection | ✓ | 4 |
+| keychaincredential.generate_ssh_key_pair |  |  |  |  |
+| keychaincredential.get_instance |  |  |  |  |
+| keychaincredential.query | ✓ | GetSSHKeyPair, ListSSHKeyPairs, GetSSHConnection, ListSSHConnections | ✓ | 16 |
+| keychaincredential.remote_ssh_host_key_scan |  |  |  |  |
+| keychaincredential.remote_ssh_semiautomatic_setup |  |  |  |  |
+| keychaincredential.setup_ssh_connection |  |  |  |  |
+| keychaincredential.update | ✓ | UpdateSSHKeyPair, UpdateSSHConnection | ✓ | 4 |
+| keychaincredential.used_by |  |  |  |  |
+
 ### SnapshotService — `zfs.snapshot` (9 methods)
 
 | API Method | Implemented | Go Method | Tested | Tests |
@@ -376,7 +392,7 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | virt.instance.stop | ✓ | StopInstance | ✓ | 3 |
 | virt.instance.update | ✓ | UpdateInstance | ✓ | 3 |
 
-## Uncovered Namespaces (95 namespaces, 512 methods)
+## Uncovered Namespaces (94 namespaces, 502 methods)
 
 | Namespace | Methods |
 |-----------|--------:|
@@ -432,7 +448,6 @@ Total API methods: 771 | Implemented: 74 (9.6%) | Tested: 74 (100.0% of implemen
 | kerberos | 2 |
 | kerberos.keytab | 5 |
 | kerberos.realm | 5 |
-| keychaincredential | 10 |
 | kmip | 5 |
 | ldap | 4 |
 | mail | 4 |
