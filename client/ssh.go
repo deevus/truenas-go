@@ -222,6 +222,8 @@ func (c *SSHClient) connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to SSH agent at %q: %w", c.config.AgentSocket, err)
 		}
+		// close after handshake; Signers only needed during Dial below
+		defer func() { _ = conn.Close() }()
 		agentClient := agent.NewClient(conn)
 		authMethods = append(authMethods, ssh.PublicKeysCallback(agentClient.Signers))
 	} else {
