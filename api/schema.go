@@ -21,6 +21,26 @@ type MethodDef struct {
 	Uploadable  bool    `json:"uploadable"`
 	ItemMethod  bool    `json:"item_method"`
 	RequireWS   bool    `json:"require_websocket"`
+	// Accepts holds the JSON Schema for each positional argument, in order.
+	// e.g. user.create takes one argument, user.update takes (id, params).
+	Accepts []json.RawMessage `json:"accepts"`
+}
+
+// ArgSchema returns the JSON Schema for the argIdx'th positional argument of a
+// method, for the given TrueNAS version.
+func ArgSchema(version, method string, argIdx int) (json.RawMessage, error) {
+	methods, err := Methods(version)
+	if err != nil {
+		return nil, err
+	}
+	def, ok := methods[method]
+	if !ok {
+		return nil, fmt.Errorf("method %s not found in version %s", method, version)
+	}
+	if argIdx >= len(def.Accepts) {
+		return nil, fmt.Errorf("method %s takes %d args, want index %d", method, len(def.Accepts), argIdx)
+	}
+	return def.Accepts[argIdx], nil
 }
 
 // Methods returns all API methods for a given TrueNAS version (e.g. "25.04").
