@@ -242,9 +242,20 @@ func TestUserCreateOptsToParams_OptionalFields(t *testing.T) {
 
 	params := userCreateOptsToParams(opts)
 
-	// email is always sent (even empty, so it can be cleared)
-	if _, ok := params["email"]; !ok {
+	// email is always sent (as null when empty, so it can be cleared)
+	email, ok := params["email"]
+	if !ok {
 		t.Error("expected email to always be present")
+	}
+	if email != nil {
+		t.Errorf("expected email to be null when empty, got %v", email)
+	}
+	// The API rejects empty strings for these and applies its own defaults
+	// when they are absent, so they must be omitted rather than sent empty.
+	for _, key := range []string{"home", "home_mode", "shell"} {
+		if _, ok := params[key]; ok {
+			t.Errorf("expected %s to be omitted when empty", key)
+		}
 	}
 	if _, ok := params["password"]; ok {
 		t.Error("expected password to be omitted when empty")
@@ -292,6 +303,45 @@ func TestUserUpdateOptsToParams(t *testing.T) {
 	}
 	if _, ok := params["home_create"]; ok {
 		t.Error("home_create should not be in update params")
+	}
+	// Unset path fields are omitted so they stay unchanged
+	for _, key := range []string{"home", "home_mode", "shell"} {
+		if _, ok := params[key]; ok {
+			t.Errorf("expected %s to be omitted when empty", key)
+		}
+	}
+}
+
+func TestUserUpdateOptsToParams_PathFields(t *testing.T) {
+	opts := UpdateUserOpts{
+		Username: "jdoe",
+		Home:     "/home/jdoe",
+		HomeMode: "755",
+		Shell:    "/usr/bin/bash",
+	}
+
+	params := userUpdateOptsToParams(opts)
+
+	if params["home"] != "/home/jdoe" {
+		t.Errorf("expected home=/home/jdoe, got %v", params["home"])
+	}
+	if params["home_mode"] != "755" {
+		t.Errorf("expected home_mode=755, got %v", params["home_mode"])
+	}
+	if params["shell"] != "/usr/bin/bash" {
+		t.Errorf("expected shell=/usr/bin/bash, got %v", params["shell"])
+	}
+}
+
+func TestUserUpdateOptsToParams_ClearsEmail(t *testing.T) {
+	params := userUpdateOptsToParams(UpdateUserOpts{Username: "jdoe"})
+
+	email, ok := params["email"]
+	if !ok {
+		t.Fatal("expected email to always be present")
+	}
+	if email != nil {
+		t.Errorf("expected email to be null when empty, got %v", email)
 	}
 }
 

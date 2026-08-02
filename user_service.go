@@ -209,22 +209,40 @@ func (s *UserService) queryOne(ctx context.Context, field string, value any) (*U
 	return &user, nil
 }
 
+// emailParam returns the value to send for the API's email field. The API types
+// it as an email address or null, so an empty string is rejected by validation;
+// null is how an address is cleared. Always sent so it can be cleared on update.
+func emailParam(email string) any {
+	if email == "" {
+		return nil
+	}
+	return email
+}
+
 // userCreateOptsToParams converts CreateUserOpts to API parameters.
+// Home, HomeMode, and Shell are omitted when empty so the API applies its own
+// defaults — sending an empty string for them fails validation.
 func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
-		"email":                opts.Email,
+		"email":                emailParam(opts.Email),
 		"password_disabled":    opts.PasswordDisabled,
-		"home":                 opts.Home,
-		"home_mode":            opts.HomeMode,
-		"shell":                opts.Shell,
 		"smb":                  opts.SMB,
 		"ssh_password_enabled": opts.SSHPasswordEnabled,
 		"locked":               opts.Locked,
 	}
 	if opts.UID != 0 {
 		params["uid"] = opts.UID
+	}
+	if opts.Home != "" {
+		params["home"] = opts.Home
+	}
+	if opts.HomeMode != "" {
+		params["home_mode"] = opts.HomeMode
+	}
+	if opts.Shell != "" {
+		params["shell"] = opts.Shell
 	}
 	if opts.GroupCreate {
 		params["group_create"] = true
@@ -255,18 +273,26 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 
 // userUpdateOptsToParams converts UpdateUserOpts to API parameters.
 // Excludes UID, GroupCreate, and HomeCreate (immutable after creation).
+// Home, HomeMode, and Shell are omitted when empty, leaving them unchanged —
+// sending an empty string for them fails validation.
 func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
-		"email":                opts.Email,
+		"email":                emailParam(opts.Email),
 		"password_disabled":    opts.PasswordDisabled,
-		"home":                 opts.Home,
-		"home_mode":            opts.HomeMode,
-		"shell":                opts.Shell,
 		"smb":                  opts.SMB,
 		"ssh_password_enabled": opts.SSHPasswordEnabled,
 		"locked":               opts.Locked,
+	}
+	if opts.Home != "" {
+		params["home"] = opts.Home
+	}
+	if opts.HomeMode != "" {
+		params["home_mode"] = opts.HomeMode
+	}
+	if opts.Shell != "" {
+		params["shell"] = opts.Shell
 	}
 	if opts.Password != "" {
 		params["password"] = opts.Password
