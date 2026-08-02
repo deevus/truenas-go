@@ -18,7 +18,6 @@ func TestUserFromResponse(t *testing.T) {
 		Email:    strPtr("john@example.com"),
 		Home:     "/home/jdoe",
 		Shell:    "/usr/bin/zsh",
-		HomeMode: "755",
 		Group: UserGroupRef{
 			ID:   42,
 			GID:  5000,
@@ -59,9 +58,6 @@ func TestUserFromResponse(t *testing.T) {
 	}
 	if user.Shell != "/usr/bin/zsh" {
 		t.Errorf("expected Shell /usr/bin/zsh, got %s", user.Shell)
-	}
-	if user.HomeMode != "755" {
-		t.Errorf("expected HomeMode 755, got %s", user.HomeMode)
 	}
 	if user.GroupID != 42 {
 		t.Errorf("expected GroupID 42, got %d", user.GroupID)
@@ -363,7 +359,8 @@ func TestNewUserService(t *testing.T) {
 }
 
 func sampleUserJSON() json.RawMessage {
-	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "home_mode": "755", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
+	// Note: no home_mode — the API accepts it on create/update but never returns it.
+	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
 }
 
 func TestUserService_Create(t *testing.T) {

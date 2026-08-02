@@ -15,7 +15,6 @@ type User struct {
 	Email                string
 	Home                 string
 	Shell                string
-	HomeMode             string
 	GroupID              int64
 	Groups               []int64
 	SMB                  bool
@@ -43,7 +42,7 @@ type CreateUserOpts struct {
 	Groups               []int64
 	Home                 string
 	HomeCreate           bool
-	HomeMode             string
+	HomeMode             string // write-only; the API never returns it
 	Shell                string
 	SMB                  bool
 	SSHPasswordEnabled   bool
@@ -64,7 +63,7 @@ type UpdateUserOpts struct {
 	Group                int64
 	Groups               []int64
 	Home                 string
-	HomeMode             string
+	HomeMode             string // write-only; the API never returns it
 	Shell                string
 	SMB                  bool
 	SSHPasswordEnabled   bool
@@ -334,7 +333,6 @@ func userFromResponse(resp UserResponse) User {
 		Email:                email,
 		Home:                 resp.Home,
 		Shell:                resp.Shell,
-		HomeMode:             resp.HomeMode,
 		GroupID:              resp.Group.ID,
 		Groups:               resp.Groups,
 		SMB:                  resp.SMB,

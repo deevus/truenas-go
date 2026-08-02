@@ -9,7 +9,6 @@ type UserResponse struct {
 	Email                *string       `json:"email"`
 	Home                 string        `json:"home"`
 	Shell                string        `json:"shell"`
-	HomeMode             string        `json:"home_mode"`
 	Group                UserGroupRef  `json:"group"`
 	Groups               []int64       `json:"groups"`
 	SMB                  bool          `json:"smb"`
