@@ -356,6 +356,47 @@ func TestUserService_Create(t *testing.T) {
 	}
 }
 
+// TrueNAS 24.x returns the bare primary key from user.create rather than the
+// full user object returned by 25.04+.
+func TestUserService_Create_BareIDResponse(t *testing.T) {
+	callCount := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callCount++
+			switch callCount {
+			case 1:
+				if method != "user.create" {
+					t.Errorf("expected user.create, got %s", method)
+				}
+				return json.RawMessage(`10`), nil
+			case 2:
+				if method != "user.get_instance" {
+					t.Errorf("expected user.get_instance, got %s", method)
+				}
+				if params != int64(10) {
+					t.Errorf("expected get_instance id 10, got %v", params)
+				}
+				return sampleUserJSON(), nil
+			default:
+				t.Fatalf("unexpected call %d: %s", callCount, method)
+				return nil, nil
+			}
+		},
+	}
+
+	svc := NewUserService(mock, Version{Major: 24, Minor: 10})
+	user, err := svc.Create(context.Background(), CreateUserOpts{
+		Username: "jdoe",
+		FullName: "John Doe",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user.ID != 10 {
+		t.Errorf("expected ID 10, got %d", user.ID)
+	}
+}
+
 func TestUserService_Get(t *testing.T) {
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {

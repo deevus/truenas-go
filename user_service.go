@@ -93,14 +93,32 @@ func (s *UserService) Create(ctx context.Context, opts CreateUserOpts) (*User, e
 		return nil, err
 	}
 
+	id, err := parseCreatedUserID(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.Get(ctx, id)
+}
+
+// parseCreatedUserID extracts the new user's ID from a user.create response.
+// TrueNAS 24.x returns the bare primary key; 25.04+ returns the full user
+// object. Both shapes are accepted so the caller does not have to know which
+// version it is talking to.
+func parseCreatedUserID(result json.RawMessage) (int64, error) {
+	var id int64
+	if err := json.Unmarshal(result, &id); err == nil {
+		return id, nil
+	}
+
 	var createResp struct {
 		ID int64 `json:"id"`
 	}
 	if err := json.Unmarshal(result, &createResp); err != nil {
-		return nil, fmt.Errorf("parse create response: %w", err)
+		return 0, fmt.Errorf("parse create response: %w", err)
 	}
 
-	return s.Get(ctx, createResp.ID)
+	return createResp.ID, nil
 }
 
 // Get returns a user by ID, or nil if not found.
