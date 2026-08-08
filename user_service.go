@@ -296,9 +296,13 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 // sending an empty string for them fails validation.
 func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	params := map[string]any{
-		"username":  opts.Username,
-		"full_name": opts.FullName,
-		"email":     emailParam(opts.Email),
+		"email": emailParam(opts.Email),
+	}
+	if opts.Username != "" {
+		params["username"] = opts.Username
+	}
+	if opts.FullName != "" {
+		params["full_name"] = opts.FullName
 	}
 	if opts.PasswordDisabled != nil {
 		params["password_disabled"] = *opts.PasswordDisabled

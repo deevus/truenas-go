@@ -400,6 +400,16 @@ func captureUserUpdateParams(t *testing.T, opts UpdateUserOpts) map[string]any {
 	return captured
 }
 
+func TestUserService_Update_OmitsUnsetIdentityFields(t *testing.T) {
+	params := captureUserUpdateParams(t, UpdateUserOpts{Shell: "/usr/bin/bash"})
+
+	for _, key := range []string{"username", "full_name"} {
+		if _, ok := params[key]; ok {
+			t.Errorf("expected %s to be omitted", key)
+		}
+	}
+}
+
 func TestUserService_Update_BooleanOmissionAndFalse(t *testing.T) {
 	keys := []string{"password_disabled", "smb", "ssh_password_enabled", "locked"}
 
