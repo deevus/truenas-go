@@ -33,7 +33,7 @@ type CreateGroupOpts struct {
 // GID is immutable and cannot be changed after creation.
 type UpdateGroupOpts struct {
 	Name                 string
-	SMB                  bool
+	SMB                  *bool
 	SudoCommands         []string
 	SudoCommandsNopasswd []string
 }
@@ -186,9 +186,12 @@ func groupCreateOptsToParams(opts CreateGroupOpts) map[string]any {
 
 // groupUpdateOptsToParams converts UpdateGroupOpts to API parameters.
 func groupUpdateOptsToParams(opts UpdateGroupOpts) map[string]any {
-	params := map[string]any{
-		"name": opts.Name,
-		"smb":  opts.SMB,
+	params := make(map[string]any)
+	if opts.Name != "" {
+		params["name"] = opts.Name
+	}
+	if opts.SMB != nil {
+		params["smb"] = *opts.SMB
 	}
 	if opts.SudoCommands != nil {
 		params["sudo_commands"] = opts.SudoCommands

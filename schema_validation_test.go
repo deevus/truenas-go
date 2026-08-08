@@ -158,7 +158,28 @@ func TestGroupCreateParamsMatchSchema(t *testing.T) {
 }
 
 func TestGroupUpdateParamsMatchSchema(t *testing.T) {
-	assertValid(t, "group.update", 1, groupUpdateOptsToParams(UpdateGroupOpts{Name: "devs"}))
+	tests := []struct {
+		name string
+		opts UpdateGroupOpts
+	}{
+		{
+			name: "minimal",
+			opts: UpdateGroupOpts{Name: "devs"},
+		},
+		{
+			name: "all fields",
+			opts: UpdateGroupOpts{
+				Name: "devs", SMB: BoolPtr(false),
+				SudoCommands: []string{}, SudoCommandsNopasswd: []string{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertValid(t, "group.update", 1, groupUpdateOptsToParams(tt.opts))
+		})
+	}
 }
 
 // TestEmptyStringParamsRejectedBySchema is a guard on the guard: it pins the

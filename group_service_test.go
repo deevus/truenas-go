@@ -118,7 +118,7 @@ func TestGroupCreateOptsToParams_ZeroGID(t *testing.T) {
 func TestGroupUpdateOptsToParams(t *testing.T) {
 	opts := UpdateGroupOpts{
 		Name:                 "new-name",
-		SMB:                  false,
+		SMB:                  BoolPtr(false),
 		SudoCommands:         []string{},
 		SudoCommandsNopasswd: []string{},
 	}
@@ -374,6 +374,97 @@ func TestGroupService_List(t *testing.T) {
 	}
 	if groups[1].Name != "devs" {
 		t.Errorf("expected second group devs, got %s", groups[1].Name)
+	}
+}
+
+func TestGroupService_Update_FieldOmissionAndExplicitFalse(t *testing.T) {
+	groupJSON := `{"id": 42, "gid": 5000, "name": "devs", "builtin": false, "smb": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "users": [], "local": true, "immutable": false}`
+
+	tests := []struct {
+		name   string
+		opts   UpdateGroupOpts
+		assert func(t *testing.T, update map[string]any)
+	}{
+		{
+			name: "omits name and smb when updating sudo commands",
+			opts: UpdateGroupOpts{SudoCommands: []string{"ALL"}},
+			assert: func(t *testing.T, update map[string]any) {
+				t.Helper()
+				if _, ok := update["name"]; ok {
+					t.Fatalf("expected name to be omitted, got %#v", update["name"])
+				}
+				if _, ok := update["smb"]; ok {
+					t.Fatalf("expected smb to be omitted, got %#v", update["smb"])
+				}
+				sudoCommands, ok := update["sudo_commands"].([]string)
+				if !ok || len(sudoCommands) != 1 || sudoCommands[0] != "ALL" {
+					t.Fatalf("expected sudo_commands=[ALL], got %#v", update["sudo_commands"])
+				}
+			},
+		},
+		{
+			name: "omits name and sends explicit smb false",
+			opts: UpdateGroupOpts{SMB: BoolPtr(false)},
+			assert: func(t *testing.T, update map[string]any) {
+				t.Helper()
+				if _, ok := update["name"]; ok {
+					t.Fatalf("expected name to be omitted, got %#v", update["name"])
+				}
+				smb, ok := update["smb"].(bool)
+				if !ok || smb {
+					t.Fatalf("expected smb=false, got %#v", update["smb"])
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			mock := &mockCaller{
+				callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+					callCount++
+					switch callCount {
+					case 1:
+						if method != "group.update" {
+							t.Fatalf("expected group.update, got %s", method)
+						}
+						arr, ok := params.([]any)
+						if !ok || len(arr) != 2 {
+							t.Fatalf("expected [id, params] array, got %#v", params)
+						}
+						if arr[0] != int64(42) {
+							t.Fatalf("expected id=42, got %#v", arr[0])
+						}
+						update, ok := arr[1].(map[string]any)
+						if !ok {
+							t.Fatalf("expected update params map, got %T", arr[1])
+						}
+						tt.assert(t, update)
+						return json.RawMessage(`42`), nil
+					case 2:
+						if method != "group.get_instance" {
+							t.Fatalf("expected group.get_instance, got %s", method)
+						}
+						return json.RawMessage(groupJSON), nil
+					default:
+						t.Fatalf("unexpected call %d", callCount)
+						return nil, nil
+					}
+				},
+			}
+
+			group, err := NewGroupService(mock, Version{}).Update(context.Background(), 42, tt.opts)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if group == nil || group.ID != 42 {
+				t.Fatalf("unexpected group: %#v", group)
+			}
+			if callCount != 2 {
+				t.Fatalf("expected 2 calls, got %d", callCount)
+			}
+		})
 	}
 }
 
