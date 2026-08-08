@@ -119,7 +119,7 @@ func TestUserUpdateParamsMatchSchema(t *testing.T) {
 				Username: "jdoe", FullName: "John Doe", Email: StringPtr("jdoe@example.com"),
 				Password: "hunter2xyz", Group: 42, Groups: []int64{100},
 				Home: "/mnt/tank/home/jdoe", HomeMode: "700", Shell: "/usr/bin/bash",
-				SMB: BoolPtr(true), SSHPasswordEnabled: BoolPtr(true), SSHPubKey: "ssh-ed25519 AAAAC3Nz",
+				SMB: BoolPtr(true), SSHPasswordEnabled: BoolPtr(true), SSHPubKey: StringPtr("ssh-ed25519 AAAAC3Nz"),
 				Locked: BoolPtr(true), SudoCommands: []string{}, SudoCommandsNopasswd: []string{},
 			},
 		},

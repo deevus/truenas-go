@@ -349,6 +349,26 @@ func TestUserService_Update_EmailOmissionAndClearing(t *testing.T) {
 	})
 }
 
+func TestUserService_Update_SSHPubKeyOmissionAndClearing(t *testing.T) {
+	t.Run("omit", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{Shell: "/usr/bin/bash"})
+		if _, ok := params["sshpubkey"]; ok {
+			t.Fatal("expected sshpubkey to be omitted")
+		}
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{SSHPubKey: StringPtr("")})
+		value, ok := params["sshpubkey"]
+		if !ok {
+			t.Fatal("expected sshpubkey to be sent")
+		}
+		if value != "" {
+			t.Fatalf("expected empty sshpubkey, got %#v", value)
+		}
+	})
+}
+
 // --- Service CRUD tests ---
 
 func TestNewUserService(t *testing.T) {
@@ -988,7 +1008,7 @@ func TestUserUpdateOptsToParams_AllOptionalFields(t *testing.T) {
 		Password:             "newpass",
 		Group:                42,
 		Groups:               []int64{100},
-		SSHPubKey:            "ssh-ed25519 AAAA...",
+		SSHPubKey:            StringPtr("ssh-ed25519 AAAA..."),
 		SudoCommands:         []string{"/usr/bin/apt"},
 		SudoCommandsNopasswd: []string{"/usr/bin/systemctl"},
 	}

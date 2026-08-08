@@ -67,7 +67,7 @@ type UpdateUserOpts struct {
 	Shell                string
 	SMB                  *bool
 	SSHPasswordEnabled   *bool
-	SSHPubKey            string
+	SSHPubKey            *string
 	Locked               *bool
 	SudoCommands         []string
 	SudoCommandsNopasswd []string
@@ -335,8 +335,8 @@ func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	if opts.Groups != nil {
 		params["groups"] = opts.Groups
 	}
-	if opts.SSHPubKey != "" {
-		params["sshpubkey"] = opts.SSHPubKey
+	if opts.SSHPubKey != nil {
+		params["sshpubkey"] = *opts.SSHPubKey
 	}
 	if opts.SudoCommands != nil {
 		params["sudo_commands"] = opts.SudoCommands
