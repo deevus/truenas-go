@@ -91,3 +91,10 @@ func TestMethods_KnownFields(t *testing.T) {
 		}
 	}
 }
+
+func TestArgSchema_NegativeIndex(t *testing.T) {
+	_, err := ArgSchema("25.04", "user.create", -1)
+	if err == nil {
+		t.Fatal("expected error for negative argument index")
+	}
+}
