@@ -62,7 +62,14 @@ func (s *GroupService) Create(ctx context.Context, opts CreateGroupOpts) (*Group
 		return nil, fmt.Errorf("parse create response: %w", err)
 	}
 
-	return s.Get(ctx, id)
+	group, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if group == nil {
+		return nil, fmt.Errorf("group %d not found after create", id)
+	}
+	return group, nil
 }
 
 // Get returns a group by ID, or nil if not found.

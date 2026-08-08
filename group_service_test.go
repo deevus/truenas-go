@@ -154,6 +154,27 @@ func TestNewGroupService(t *testing.T) {
 	}
 }
 
+func TestGroupService_Create_NotFoundAfterCreate(t *testing.T) {
+	calls := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			calls++
+			if calls == 1 {
+				return json.RawMessage(`42`), nil
+			}
+			return nil, errors.New("group not found")
+		},
+	}
+
+	group, err := NewGroupService(mock, Version{}).Create(context.Background(), CreateGroupOpts{Name: "devs"})
+	if group != nil {
+		t.Fatalf("expected nil group, got %#v", group)
+	}
+	if err == nil || err.Error() != "group 42 not found after create" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestGroupService_Create(t *testing.T) {
 	groupJSON := `{"id": 42, "gid": 5000, "name": "devs", "builtin": false, "smb": true, "sudo_commands": [], "sudo_commands_nopasswd": [], "users": [], "local": true, "immutable": false}`
 
