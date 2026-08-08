@@ -129,7 +129,14 @@ func (s *GroupService) Update(ctx context.Context, id int64, opts UpdateGroupOpt
 		return nil, err
 	}
 
-	return s.Get(ctx, id)
+	group, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if group == nil {
+		return nil, fmt.Errorf("group %d not found after update", id)
+	}
+	return group, nil
 }
 
 // Delete deletes a group by ID. Does not delete member users.

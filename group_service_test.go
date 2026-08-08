@@ -554,6 +554,27 @@ func TestGroupService_Update_Error(t *testing.T) {
 	}
 }
 
+func TestGroupService_Update_NotFoundAfterUpdate(t *testing.T) {
+	calls := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			calls++
+			if calls == 1 {
+				return json.RawMessage(`42`), nil
+			}
+			return nil, errors.New("group not found")
+		},
+	}
+
+	group, err := NewGroupService(mock, Version{}).Update(context.Background(), 42, UpdateGroupOpts{Name: "devs"})
+	if group != nil {
+		t.Fatalf("expected nil group, got %#v", group)
+	}
+	if err == nil || err.Error() != "group 42 not found after update" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestGroupService_Delete_Error(t *testing.T) {
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
