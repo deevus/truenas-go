@@ -540,8 +540,6 @@ func TestUserService_Create(t *testing.T) {
 	}
 }
 
-// TrueNAS 24.x returns the bare primary key from user.create rather than the
-// full user object returned by 25.04+.
 func TestUserService_Create_NotFoundAfterCreate(t *testing.T) {
 	calls := 0
 	mock := &mockCaller{
@@ -566,6 +564,8 @@ func TestUserService_Create_NotFoundAfterCreate(t *testing.T) {
 	}
 }
 
+// TrueNAS 24.x returns the bare primary key from user.create rather than the
+// full user object returned by 25.04+.
 func TestUserService_Create_BareIDResponse(t *testing.T) {
 	callCount := 0
 	mock := &mockCaller{
