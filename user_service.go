@@ -57,7 +57,7 @@ type CreateUserOpts struct {
 type UpdateUserOpts struct {
 	Username             string
 	FullName             string
-	Email                string
+	Email                *string
 	Password             string
 	PasswordDisabled     *bool
 	Group                int64
@@ -230,7 +230,7 @@ func (s *UserService) queryOne(ctx context.Context, field string, value any) (*U
 
 // emailParam returns the value to send for the API's email field. The API types
 // it as an email address or null, so an empty string is rejected by validation;
-// null is how an address is cleared. Always sent so it can be cleared on update.
+// null is how an address is cleared.
 func emailParam(email string) any {
 	if email == "" {
 		return nil
@@ -295,8 +295,9 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 // Home, HomeMode, and Shell are omitted when empty, leaving them unchanged —
 // sending an empty string for them fails validation.
 func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
-	params := map[string]any{
-		"email": emailParam(opts.Email),
+	params := map[string]any{}
+	if opts.Email != nil {
+		params["email"] = emailParam(*opts.Email)
 	}
 	if opts.Username != "" {
 		params["username"] = opts.Username

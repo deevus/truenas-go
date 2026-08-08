@@ -274,7 +274,7 @@ func TestUserUpdateOptsToParams(t *testing.T) {
 	opts := UpdateUserOpts{
 		Username:         "newname",
 		FullName:         "New Name",
-		Email:            "new@example.com",
+		Email:            StringPtr("new@example.com"),
 		PasswordDisabled: BoolPtr(true),
 		SMB:              BoolPtr(false),
 	}
@@ -329,16 +329,24 @@ func TestUserUpdateOptsToParams_PathFields(t *testing.T) {
 	}
 }
 
-func TestUserUpdateOptsToParams_ClearsEmail(t *testing.T) {
-	params := userUpdateOptsToParams(UpdateUserOpts{Username: "jdoe"})
+func TestUserService_Update_EmailOmissionAndClearing(t *testing.T) {
+	t.Run("omit", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{Shell: "/usr/bin/bash"})
+		if _, ok := params["email"]; ok {
+			t.Fatal("expected email to be omitted")
+		}
+	})
 
-	email, ok := params["email"]
-	if !ok {
-		t.Fatal("expected email to always be present")
-	}
-	if email != nil {
-		t.Errorf("expected email to be null when empty, got %v", email)
-	}
+	t.Run("clear", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{Email: StringPtr("")})
+		value, ok := params["email"]
+		if !ok {
+			t.Fatal("expected email to be sent")
+		}
+		if value != nil {
+			t.Fatalf("expected email=null, got %#v", value)
+		}
+	})
 }
 
 // --- Service CRUD tests ---
@@ -976,7 +984,7 @@ func TestUserUpdateOptsToParams_AllOptionalFields(t *testing.T) {
 	opts := UpdateUserOpts{
 		Username:             "jdoe",
 		FullName:             "John",
-		Email:                "j@example.com",
+		Email:                StringPtr("j@example.com"),
 		Password:             "newpass",
 		Group:                42,
 		Groups:               []int64{100},

@@ -116,7 +116,7 @@ func TestUserUpdateParamsMatchSchema(t *testing.T) {
 		{
 			name: "all fields",
 			opts: UpdateUserOpts{
-				Username: "jdoe", FullName: "John Doe", Email: "jdoe@example.com",
+				Username: "jdoe", FullName: "John Doe", Email: StringPtr("jdoe@example.com"),
 				Password: "hunter2xyz", Group: 42, Groups: []int64{100},
 				Home: "/mnt/tank/home/jdoe", HomeMode: "700", Shell: "/usr/bin/bash",
 				SMB: BoolPtr(true), SSHPasswordEnabled: BoolPtr(true), SSHPubKey: "ssh-ed25519 AAAAC3Nz",
