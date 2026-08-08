@@ -444,6 +444,44 @@ func TestUserService_Create_BareIDResponse(t *testing.T) {
 	}
 }
 
+func TestUserService_Create_InvalidIDResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		response json.RawMessage
+	}{
+		{name: "null", response: json.RawMessage(`null`)},
+		{name: "numeric zero", response: json.RawMessage(`0`)},
+		{name: "empty object", response: json.RawMessage(`{}`)},
+		{name: "object zero", response: json.RawMessage(`{"id": 0}`)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			mock := &mockCaller{
+				callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+					calls++
+					if calls > 1 {
+						t.Fatalf("unexpected lookup after invalid create response")
+					}
+					return tt.response, nil
+				},
+			}
+
+			_, err := NewUserService(mock, Version{}).Create(context.Background(), CreateUserOpts{
+				Username: "jdoe",
+				FullName: "John Doe",
+			})
+			if err == nil {
+				t.Fatal("expected invalid create ID error")
+			}
+			if got, want := err.Error(), "parse create response: invalid user id 0"; got != want {
+				t.Fatalf("unexpected error: got %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestUserService_Get(t *testing.T) {
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {

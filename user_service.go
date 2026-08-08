@@ -107,6 +107,9 @@ func (s *UserService) Create(ctx context.Context, opts CreateUserOpts) (*User, e
 func parseCreatedUserID(result json.RawMessage) (int64, error) {
 	var id int64
 	if err := json.Unmarshal(result, &id); err == nil {
+		if id < 1 {
+			return 0, fmt.Errorf("parse create response: invalid user id %d", id)
+		}
 		return id, nil
 	}
 
@@ -115,6 +118,9 @@ func parseCreatedUserID(result json.RawMessage) (int64, error) {
 	}
 	if err := json.Unmarshal(result, &createResp); err != nil {
 		return 0, fmt.Errorf("parse create response: %w", err)
+	}
+	if createResp.ID < 1 {
+		return 0, fmt.Errorf("parse create response: invalid user id %d", createResp.ID)
 	}
 
 	return createResp.ID, nil
