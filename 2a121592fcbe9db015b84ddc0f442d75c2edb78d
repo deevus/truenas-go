@@ -1,0 +1,1 @@
+{"go-coverage-action-fmt":1,"coverage_pct":87.42574257425743,"pkg_stats":{"github.com/deevus/truenas-go":[85.6891495601173],"github.com/deevus/truenas-go/api":[84.84848484848484],"github.com/deevus/truenas-go/client":[88.78695208970439],"github.com/deevus/truenas-go/cmd/featurematrix":[92.92604501607717]},"skipped_count":0}
