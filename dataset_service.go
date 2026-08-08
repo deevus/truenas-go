@@ -95,6 +95,9 @@ func Int64Ptr(v int64) *int64 { return &v }
 // StringPtr returns a pointer to a string. Helper for setting optional fields.
 func StringPtr(v string) *string { return &v }
 
+// BoolPtr returns a pointer to a bool. Helper for setting optional fields.
+func BoolPtr(v bool) *bool { return &v }
+
 // DatasetService provides typed methods for the pool.dataset.* and pool.query API namespaces.
 type DatasetService struct {
 	client  Caller

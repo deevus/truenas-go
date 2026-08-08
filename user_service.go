@@ -59,16 +59,16 @@ type UpdateUserOpts struct {
 	FullName             string
 	Email                string
 	Password             string
-	PasswordDisabled     bool
+	PasswordDisabled     *bool
 	Group                int64
 	Groups               []int64
 	Home                 string
 	HomeMode             string // write-only; the API never returns it
 	Shell                string
-	SMB                  bool
-	SSHPasswordEnabled   bool
+	SMB                  *bool
+	SSHPasswordEnabled   *bool
 	SSHPubKey            string
-	Locked               bool
+	Locked               *bool
 	SudoCommands         []string
 	SudoCommandsNopasswd []string
 }
@@ -296,13 +296,21 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 // sending an empty string for them fails validation.
 func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	params := map[string]any{
-		"username":             opts.Username,
-		"full_name":            opts.FullName,
-		"email":                emailParam(opts.Email),
-		"password_disabled":    opts.PasswordDisabled,
-		"smb":                  opts.SMB,
-		"ssh_password_enabled": opts.SSHPasswordEnabled,
-		"locked":               opts.Locked,
+		"username":  opts.Username,
+		"full_name": opts.FullName,
+		"email":     emailParam(opts.Email),
+	}
+	if opts.PasswordDisabled != nil {
+		params["password_disabled"] = *opts.PasswordDisabled
+	}
+	if opts.SMB != nil {
+		params["smb"] = *opts.SMB
+	}
+	if opts.SSHPasswordEnabled != nil {
+		params["ssh_password_enabled"] = *opts.SSHPasswordEnabled
+	}
+	if opts.Locked != nil {
+		params["locked"] = *opts.Locked
 	}
 	if opts.Home != "" {
 		params["home"] = opts.Home

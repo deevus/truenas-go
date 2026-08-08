@@ -275,8 +275,8 @@ func TestUserUpdateOptsToParams(t *testing.T) {
 		Username:         "newname",
 		FullName:         "New Name",
 		Email:            "new@example.com",
-		PasswordDisabled: true,
-		SMB:              false,
+		PasswordDisabled: BoolPtr(true),
+		SMB:              BoolPtr(false),
 	}
 
 	params := userUpdateOptsToParams(opts)
@@ -361,6 +361,75 @@ func TestNewUserService(t *testing.T) {
 func sampleUserJSON() json.RawMessage {
 	// Note: no home_mode — the API accepts it on create/update but never returns it.
 	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
+}
+
+func captureUserUpdateParams(t *testing.T, opts UpdateUserOpts) map[string]any {
+	t.Helper()
+
+	calls := 0
+	var captured map[string]any
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			calls++
+			switch calls {
+			case 1:
+				if method != "user.update" {
+					t.Fatalf("expected user.update, got %s", method)
+				}
+				args, ok := params.([]any)
+				if !ok || len(args) != 2 {
+					t.Fatalf("expected [id, params], got %#v", params)
+				}
+				captured, ok = args[1].(map[string]any)
+				if !ok {
+					t.Fatalf("expected params map, got %T", args[1])
+				}
+				return json.RawMessage(`10`), nil
+			case 2:
+				return sampleUserJSON(), nil
+			default:
+				t.Fatalf("unexpected call %d", calls)
+				return nil, nil
+			}
+		},
+	}
+
+	if _, err := NewUserService(mock, Version{}).Update(context.Background(), 10, opts); err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	return captured
+}
+
+func TestUserService_Update_BooleanOmissionAndFalse(t *testing.T) {
+	keys := []string{"password_disabled", "smb", "ssh_password_enabled", "locked"}
+
+	t.Run("omit", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{Shell: "/usr/bin/bash"})
+		for _, key := range keys {
+			if _, ok := params[key]; ok {
+				t.Errorf("expected %s to be omitted", key)
+			}
+		}
+	})
+
+	t.Run("explicit false", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{
+			PasswordDisabled:   BoolPtr(false),
+			SMB:                BoolPtr(false),
+			SSHPasswordEnabled: BoolPtr(false),
+			Locked:             BoolPtr(false),
+		})
+		for _, key := range keys {
+			value, ok := params[key]
+			if !ok {
+				t.Errorf("expected %s to be sent", key)
+				continue
+			}
+			if value != false {
+				t.Errorf("expected %s=false, got %#v", key, value)
+			}
+		}
+	})
 }
 
 func TestUserService_Create(t *testing.T) {
