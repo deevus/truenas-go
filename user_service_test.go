@@ -405,6 +405,30 @@ func TestUserService_Create(t *testing.T) {
 
 // TrueNAS 24.x returns the bare primary key from user.create rather than the
 // full user object returned by 25.04+.
+func TestUserService_Create_NotFoundAfterCreate(t *testing.T) {
+	calls := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			calls++
+			if calls == 1 {
+				return json.RawMessage(`{"id": 10}`), nil
+			}
+			return nil, errors.New("user not found")
+		},
+	}
+
+	user, err := NewUserService(mock, Version{}).Create(context.Background(), CreateUserOpts{
+		Username: "jdoe",
+		FullName: "John Doe",
+	})
+	if user != nil {
+		t.Fatalf("expected nil user, got %#v", user)
+	}
+	if err == nil || err.Error() != "user 10 not found after create" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestUserService_Create_BareIDResponse(t *testing.T) {
 	callCount := 0
 	mock := &mockCaller{

@@ -97,7 +97,14 @@ func (s *UserService) Create(ctx context.Context, opts CreateUserOpts) (*User, e
 		return nil, err
 	}
 
-	return s.Get(ctx, id)
+	user, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("user %d not found after create", id)
+	}
+	return user, nil
 }
 
 // parseCreatedUserID extracts the new user's ID from a user.create response.
