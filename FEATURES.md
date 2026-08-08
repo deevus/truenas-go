@@ -220,7 +220,7 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 | group.get_next_gid |  |  |  |  |
 | group.has_password_enabled_user |  |  |  |  |
 | group.query | ✓ | List | ✓ | 3 |
-| group.update | ✓ | Update | ✓ | 3 |
+| group.update | ✓ | Update | ✓ | 4 |
 
 ### InterfaceService — `interface` (23 methods)
 
