@@ -70,6 +70,7 @@ func TestMockUserService_DefaultsToNil(t *testing.T) {
 
 func TestMockUserService_CallsFunc(t *testing.T) {
 	ctx := context.Background()
+	var gotDeleteGroup bool
 
 	mock := &MockUserService{
 		CreateFunc: func(ctx context.Context, opts CreateUserOpts) (*User, error) {
@@ -91,6 +92,7 @@ func TestMockUserService_CallsFunc(t *testing.T) {
 			return &User{ID: id, Username: opts.Username}, nil
 		},
 		DeleteFunc: func(ctx context.Context, id int64, deleteGroup bool) error {
+			gotDeleteGroup = deleteGroup
 			return nil
 		},
 	}
@@ -125,7 +127,10 @@ func TestMockUserService_CallsFunc(t *testing.T) {
 		t.Fatalf("Update: unexpected result: %v, %v", user, err)
 	}
 
-	if err := mock.Delete(ctx, 1, false); err != nil {
+	if err := mock.Delete(ctx, 1, true); err != nil {
 		t.Fatalf("Delete: unexpected error: %v", err)
+	}
+	if !gotDeleteGroup {
+		t.Fatal("DeleteFunc did not receive deleteGroup=true")
 	}
 }
