@@ -306,7 +306,7 @@ Total API methods: 771 | Implemented: 84 (10.9%) | Tested: 84 (100.0% of impleme
 
 | API Method | Implemented | Go Method | Tested | Tests |
 |------------|:-----------:|-----------|:------:|------:|
-| user.create | ✓ | Create | ✓ | 3 |
+| user.create | ✓ | Create | ✓ | 4 |
 | user.delete | ✓ | Delete | ✓ | 2 |
 | user.get_instance | ✓ | Get | ✓ | 4 |
 | user.get_next_uid |  |  |  |  |

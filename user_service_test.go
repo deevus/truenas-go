@@ -18,7 +18,6 @@ func TestUserFromResponse(t *testing.T) {
 		Email:    strPtr("john@example.com"),
 		Home:     "/home/jdoe",
 		Shell:    "/usr/bin/zsh",
-		HomeMode: "755",
 		Group: UserGroupRef{
 			ID:   42,
 			GID:  5000,
@@ -60,9 +59,6 @@ func TestUserFromResponse(t *testing.T) {
 	if user.Shell != "/usr/bin/zsh" {
 		t.Errorf("expected Shell /usr/bin/zsh, got %s", user.Shell)
 	}
-	if user.HomeMode != "755" {
-		t.Errorf("expected HomeMode 755, got %s", user.HomeMode)
-	}
 	if user.GroupID != 42 {
 		t.Errorf("expected GroupID 42, got %d", user.GroupID)
 	}
@@ -103,12 +99,12 @@ func TestUserFromResponse(t *testing.T) {
 
 func TestUserFromResponse_NullableFields(t *testing.T) {
 	resp := UserResponse{
-		ID:       1,
-		UID:      1000,
-		Username: "test",
-		Email:    nil,
+		ID:        1,
+		UID:       1000,
+		Username:  "test",
+		Email:     nil,
 		SSHPubKey: nil,
-		Group:    UserGroupRef{ID: 1},
+		Group:     UserGroupRef{ID: 1},
 	}
 
 	user := userFromResponse(resp)
@@ -242,9 +238,20 @@ func TestUserCreateOptsToParams_OptionalFields(t *testing.T) {
 
 	params := userCreateOptsToParams(opts)
 
-	// email is always sent (even empty, so it can be cleared)
-	if _, ok := params["email"]; !ok {
+	// email is always sent (as null when empty, so it can be cleared)
+	email, ok := params["email"]
+	if !ok {
 		t.Error("expected email to always be present")
+	}
+	if email != nil {
+		t.Errorf("expected email to be null when empty, got %v", email)
+	}
+	// The API rejects empty strings for these and applies its own defaults
+	// when they are absent, so they must be omitted rather than sent empty.
+	for _, key := range []string{"home", "home_mode", "shell"} {
+		if _, ok := params[key]; ok {
+			t.Errorf("expected %s to be omitted when empty", key)
+		}
 	}
 	if _, ok := params["password"]; ok {
 		t.Error("expected password to be omitted when empty")
@@ -293,6 +300,45 @@ func TestUserUpdateOptsToParams(t *testing.T) {
 	if _, ok := params["home_create"]; ok {
 		t.Error("home_create should not be in update params")
 	}
+	// Unset path fields are omitted so they stay unchanged
+	for _, key := range []string{"home", "home_mode", "shell"} {
+		if _, ok := params[key]; ok {
+			t.Errorf("expected %s to be omitted when empty", key)
+		}
+	}
+}
+
+func TestUserUpdateOptsToParams_PathFields(t *testing.T) {
+	opts := UpdateUserOpts{
+		Username: "jdoe",
+		Home:     "/home/jdoe",
+		HomeMode: "755",
+		Shell:    "/usr/bin/bash",
+	}
+
+	params := userUpdateOptsToParams(opts)
+
+	if params["home"] != "/home/jdoe" {
+		t.Errorf("expected home=/home/jdoe, got %v", params["home"])
+	}
+	if params["home_mode"] != "755" {
+		t.Errorf("expected home_mode=755, got %v", params["home_mode"])
+	}
+	if params["shell"] != "/usr/bin/bash" {
+		t.Errorf("expected shell=/usr/bin/bash, got %v", params["shell"])
+	}
+}
+
+func TestUserUpdateOptsToParams_ClearsEmail(t *testing.T) {
+	params := userUpdateOptsToParams(UpdateUserOpts{Username: "jdoe"})
+
+	email, ok := params["email"]
+	if !ok {
+		t.Fatal("expected email to always be present")
+	}
+	if email != nil {
+		t.Errorf("expected email to be null when empty, got %v", email)
+	}
 }
 
 // --- Service CRUD tests ---
@@ -313,7 +359,8 @@ func TestNewUserService(t *testing.T) {
 }
 
 func sampleUserJSON() json.RawMessage {
-	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "home_mode": "755", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
+	// Note: no home_mode — the API accepts it on create/update but never returns it.
+	return json.RawMessage(`{"id": 10, "uid": 1001, "username": "jdoe", "full_name": "John Doe", "email": "john@example.com", "home": "/home/jdoe", "shell": "/usr/bin/zsh", "group": {"id": 42, "bsdgrp_gid": 5000, "bsdgrp_group": "devs"}, "groups": [100], "smb": true, "password_disabled": false, "ssh_password_enabled": false, "sshpubkey": null, "locked": false, "sudo_commands": [], "sudo_commands_nopasswd": [], "builtin": false, "local": true, "immutable": false}`)
 }
 
 func TestUserService_Create(t *testing.T) {
@@ -353,6 +400,47 @@ func TestUserService_Create(t *testing.T) {
 	}
 	if user.Username != "jdoe" {
 		t.Errorf("expected Username jdoe, got %s", user.Username)
+	}
+}
+
+// TrueNAS 24.x returns the bare primary key from user.create rather than the
+// full user object returned by 25.04+.
+func TestUserService_Create_BareIDResponse(t *testing.T) {
+	callCount := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			callCount++
+			switch callCount {
+			case 1:
+				if method != "user.create" {
+					t.Errorf("expected user.create, got %s", method)
+				}
+				return json.RawMessage(`10`), nil
+			case 2:
+				if method != "user.get_instance" {
+					t.Errorf("expected user.get_instance, got %s", method)
+				}
+				if params != int64(10) {
+					t.Errorf("expected get_instance id 10, got %v", params)
+				}
+				return sampleUserJSON(), nil
+			default:
+				t.Fatalf("unexpected call %d: %s", callCount, method)
+				return nil, nil
+			}
+		},
+	}
+
+	svc := NewUserService(mock, Version{Major: 24, Minor: 10})
+	user, err := svc.Create(context.Background(), CreateUserOpts{
+		Username: "jdoe",
+		FullName: "John Doe",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user.ID != 10 {
+		t.Errorf("expected ID 10, got %d", user.ID)
 	}
 }
 
@@ -572,7 +660,7 @@ func TestUserService_Delete(t *testing.T) {
 	}
 
 	svc := NewUserService(mock, Version{})
-	err := svc.Delete(context.Background(), 10)
+	err := svc.Delete(context.Background(), 10, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -686,7 +774,7 @@ func TestUserService_Delete_Error(t *testing.T) {
 	}
 
 	svc := NewUserService(mock, Version{})
-	err := svc.Delete(context.Background(), 1)
+	err := svc.Delete(context.Background(), 1, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}

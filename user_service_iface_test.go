@@ -62,7 +62,7 @@ func TestMockUserService_DefaultsToNil(t *testing.T) {
 		t.Fatalf("expected nil result from Update, got: %v", user)
 	}
 
-	err = mock.Delete(ctx, 1)
+	err = mock.Delete(ctx, 1, false)
 	if err != nil {
 		t.Fatalf("expected nil error from Delete, got: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestMockUserService_CallsFunc(t *testing.T) {
 		UpdateFunc: func(ctx context.Context, id int64, opts UpdateUserOpts) (*User, error) {
 			return &User{ID: id, Username: opts.Username}, nil
 		},
-		DeleteFunc: func(ctx context.Context, id int64) error {
+		DeleteFunc: func(ctx context.Context, id int64, deleteGroup bool) error {
 			return nil
 		},
 	}
@@ -125,7 +125,7 @@ func TestMockUserService_CallsFunc(t *testing.T) {
 		t.Fatalf("Update: unexpected result: %v, %v", user, err)
 	}
 
-	if err := mock.Delete(ctx, 1); err != nil {
+	if err := mock.Delete(ctx, 1, false); err != nil {
 		t.Fatalf("Delete: unexpected error: %v", err)
 	}
 }

@@ -15,7 +15,6 @@ type User struct {
 	Email                string
 	Home                 string
 	Shell                string
-	HomeMode             string
 	GroupID              int64
 	Groups               []int64
 	SMB                  bool
@@ -43,7 +42,7 @@ type CreateUserOpts struct {
 	Groups               []int64
 	Home                 string
 	HomeCreate           bool
-	HomeMode             string
+	HomeMode             string // write-only; the API never returns it
 	Shell                string
 	SMB                  bool
 	SSHPasswordEnabled   bool
@@ -64,7 +63,7 @@ type UpdateUserOpts struct {
 	Group                int64
 	Groups               []int64
 	Home                 string
-	HomeMode             string
+	HomeMode             string // write-only; the API never returns it
 	Shell                string
 	SMB                  bool
 	SSHPasswordEnabled   bool
@@ -93,14 +92,32 @@ func (s *UserService) Create(ctx context.Context, opts CreateUserOpts) (*User, e
 		return nil, err
 	}
 
+	id, err := parseCreatedUserID(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.Get(ctx, id)
+}
+
+// parseCreatedUserID extracts the new user's ID from a user.create response.
+// TrueNAS 24.x returns the bare primary key; 25.04+ returns the full user
+// object. Both shapes are accepted so the caller does not have to know which
+// version it is talking to.
+func parseCreatedUserID(result json.RawMessage) (int64, error) {
+	var id int64
+	if err := json.Unmarshal(result, &id); err == nil {
+		return id, nil
+	}
+
 	var createResp struct {
 		ID int64 `json:"id"`
 	}
 	if err := json.Unmarshal(result, &createResp); err != nil {
-		return nil, fmt.Errorf("parse create response: %w", err)
+		return 0, fmt.Errorf("parse create response: %w", err)
 	}
 
-	return s.Get(ctx, createResp.ID)
+	return createResp.ID, nil
 }
 
 // Get returns a user by ID, or nil if not found.
@@ -162,9 +179,11 @@ func (s *UserService) Update(ctx context.Context, id int64, opts UpdateUserOpts)
 	return s.Get(ctx, id)
 }
 
-// Delete deletes a user by ID. Also deletes the user's auto-created primary group.
-func (s *UserService) Delete(ctx context.Context, id int64) error {
-	_, err := s.client.Call(ctx, "user.delete", []any{id, map[string]any{"delete_group": true}})
+// Delete deletes a user by ID. Pass deleteGroup=true when the user was created
+// with group_create=true so the auto-created primary group is cleaned up;
+// pass false when the primary group is managed separately.
+func (s *UserService) Delete(ctx context.Context, id int64, deleteGroup bool) error {
+	_, err := s.client.Call(ctx, "user.delete", []any{id, map[string]any{"delete_group": deleteGroup}})
 	return err
 }
 
@@ -189,22 +208,40 @@ func (s *UserService) queryOne(ctx context.Context, field string, value any) (*U
 	return &user, nil
 }
 
+// emailParam returns the value to send for the API's email field. The API types
+// it as an email address or null, so an empty string is rejected by validation;
+// null is how an address is cleared. Always sent so it can be cleared on update.
+func emailParam(email string) any {
+	if email == "" {
+		return nil
+	}
+	return email
+}
+
 // userCreateOptsToParams converts CreateUserOpts to API parameters.
+// Home, HomeMode, and Shell are omitted when empty so the API applies its own
+// defaults — sending an empty string for them fails validation.
 func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
-		"email":                opts.Email,
+		"email":                emailParam(opts.Email),
 		"password_disabled":    opts.PasswordDisabled,
-		"home":                 opts.Home,
-		"home_mode":            opts.HomeMode,
-		"shell":                opts.Shell,
 		"smb":                  opts.SMB,
 		"ssh_password_enabled": opts.SSHPasswordEnabled,
 		"locked":               opts.Locked,
 	}
 	if opts.UID != 0 {
 		params["uid"] = opts.UID
+	}
+	if opts.Home != "" {
+		params["home"] = opts.Home
+	}
+	if opts.HomeMode != "" {
+		params["home_mode"] = opts.HomeMode
+	}
+	if opts.Shell != "" {
+		params["shell"] = opts.Shell
 	}
 	if opts.GroupCreate {
 		params["group_create"] = true
@@ -235,18 +272,26 @@ func userCreateOptsToParams(opts CreateUserOpts) map[string]any {
 
 // userUpdateOptsToParams converts UpdateUserOpts to API parameters.
 // Excludes UID, GroupCreate, and HomeCreate (immutable after creation).
+// Home, HomeMode, and Shell are omitted when empty, leaving them unchanged —
+// sending an empty string for them fails validation.
 func userUpdateOptsToParams(opts UpdateUserOpts) map[string]any {
 	params := map[string]any{
 		"username":             opts.Username,
 		"full_name":            opts.FullName,
-		"email":                opts.Email,
+		"email":                emailParam(opts.Email),
 		"password_disabled":    opts.PasswordDisabled,
-		"home":                 opts.Home,
-		"home_mode":            opts.HomeMode,
-		"shell":                opts.Shell,
 		"smb":                  opts.SMB,
 		"ssh_password_enabled": opts.SSHPasswordEnabled,
 		"locked":               opts.Locked,
+	}
+	if opts.Home != "" {
+		params["home"] = opts.Home
+	}
+	if opts.HomeMode != "" {
+		params["home_mode"] = opts.HomeMode
+	}
+	if opts.Shell != "" {
+		params["shell"] = opts.Shell
 	}
 	if opts.Password != "" {
 		params["password"] = opts.Password
@@ -288,7 +333,6 @@ func userFromResponse(resp UserResponse) User {
 		Email:                email,
 		Home:                 resp.Home,
 		Shell:                resp.Shell,
-		HomeMode:             resp.HomeMode,
 		GroupID:              resp.Group.ID,
 		Groups:               resp.Groups,
 		SMB:                  resp.SMB,
