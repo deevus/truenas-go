@@ -204,16 +204,5 @@ func groupUpdateOptsToParams(opts UpdateGroupOpts) map[string]any {
 
 // groupFromResponse converts a wire-format GroupResponse to a user-facing Group.
 func groupFromResponse(resp GroupResponse) Group {
-	return Group{
-		ID:                   resp.ID,
-		GID:                  resp.GID,
-		Name:                 resp.Name,
-		Builtin:              resp.Builtin,
-		SMB:                  resp.SMB,
-		SudoCommands:         resp.SudoCommands,
-		SudoCommandsNopasswd: resp.SudoCommandsNopasswd,
-		Users:                resp.Users,
-		Local:                resp.Local,
-		Immutable:            resp.Immutable,
-	}
+	return Group(resp)
 }
