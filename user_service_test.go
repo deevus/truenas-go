@@ -369,6 +369,36 @@ func TestUserService_Update_SSHPubKeyOmissionAndClearing(t *testing.T) {
 	})
 }
 
+func TestUserService_Update_SliceOmissionAndClearing(t *testing.T) {
+	t.Run("omit nil slices", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{Shell: "/usr/bin/bash"})
+		for _, key := range []string{"groups", "sudo_commands", "sudo_commands_nopasswd"} {
+			if _, ok := params[key]; ok {
+				t.Errorf("expected %s to be omitted", key)
+			}
+		}
+	})
+
+	t.Run("send empty slices", func(t *testing.T) {
+		params := captureUserUpdateParams(t, UpdateUserOpts{
+			Groups:               []int64{},
+			SudoCommands:         []string{},
+			SudoCommandsNopasswd: []string{},
+		})
+
+		groups, ok := params["groups"].([]int64)
+		if !ok || groups == nil || len(groups) != 0 {
+			t.Fatalf("expected non-nil empty groups, got %#v", params["groups"])
+		}
+		for _, key := range []string{"sudo_commands", "sudo_commands_nopasswd"} {
+			commands, ok := params[key].([]string)
+			if !ok || commands == nil || len(commands) != 0 {
+				t.Errorf("expected non-nil empty %s, got %#v", key, params[key])
+			}
+		}
+	})
+}
+
 // --- Service CRUD tests ---
 
 func TestNewUserService(t *testing.T) {
