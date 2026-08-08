@@ -828,6 +828,29 @@ func TestUserService_Update_Error(t *testing.T) {
 	}
 }
 
+func TestUserService_Update_NotFoundAfterUpdate(t *testing.T) {
+	calls := 0
+	mock := &mockCaller{
+		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {
+			calls++
+			if calls == 1 {
+				return json.RawMessage(`10`), nil
+			}
+			return nil, errors.New("user not found")
+		},
+	}
+
+	user, err := NewUserService(mock, Version{}).Update(context.Background(), 10, UpdateUserOpts{
+		FullName: "Updated Name",
+	})
+	if user != nil {
+		t.Fatalf("expected nil user, got %#v", user)
+	}
+	if err == nil || err.Error() != "user 10 not found after update" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestUserService_Delete_Error(t *testing.T) {
 	mock := &mockCaller{
 		callFunc: func(ctx context.Context, method string, params any) (json.RawMessage, error) {

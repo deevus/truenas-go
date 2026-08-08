@@ -189,7 +189,14 @@ func (s *UserService) Update(ctx context.Context, id int64, opts UpdateUserOpts)
 		return nil, err
 	}
 
-	return s.Get(ctx, id)
+	user, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("user %d not found after update", id)
+	}
+	return user, nil
 }
 
 // Delete deletes a user by ID. Pass deleteGroup=true when the user was created
