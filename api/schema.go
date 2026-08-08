@@ -37,7 +37,7 @@ func ArgSchema(version, method string, argIdx int) (json.RawMessage, error) {
 	if !ok {
 		return nil, fmt.Errorf("method %s not found in version %s", method, version)
 	}
-	if argIdx >= len(def.Accepts) {
+	if argIdx < 0 || argIdx >= len(def.Accepts) {
 		return nil, fmt.Errorf("method %s takes %d args, want index %d", method, len(def.Accepts), argIdx)
 	}
 	return def.Accepts[argIdx], nil
