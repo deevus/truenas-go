@@ -186,6 +186,8 @@ func TestTaskOptsToParams(t *testing.T) {
 		Attributes: map[string]any{"bucket": "my-bucket"},
 		Exclude:    []string{"*.tmp"},
 		Include:    []string{"*.dat"},
+		PreScript:  "pre-script test",
+		PostScript: "post-script test",
 	}
 
 	params := taskOptsToParams(opts)
@@ -228,6 +230,12 @@ func TestTaskOptsToParams(t *testing.T) {
 	}
 	if _, ok := params["attributes"]; !ok {
 		t.Error("expected attributes in params")
+	}
+	if _, ok := params["pre_script"]; !ok {
+		t.Error("expected pre_script in params")
+	}
+	if _, ok := params["post_script"]; !ok {
+		t.Error("expected post_script in params")
 	}
 }
 

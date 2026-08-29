@@ -47,6 +47,14 @@ func TestCloudSyncService_CreateTask(t *testing.T) {
 					if _, ok := p["exclude"]; !ok {
 						t.Error("expected exclude in params")
 					}
+					// Verify pre_script present
+					if _, ok := p["pre_script"]; !ok {
+						t.Error("expected pre_script in params")
+					}
+					// Verify post_script present
+					if _, ok := p["post_script"]; !ok {
+						t.Error("expected post_script in params")
+					}
 					return json.RawMessage(`{"id": 1}`), nil
 				}
 				return sampleTaskJSON(), nil
@@ -77,6 +85,8 @@ func TestCloudSyncService_CreateTask(t *testing.T) {
 		},
 		Attributes: map[string]any{"bucket": "my-bucket", "folder": "/backups"},
 		Exclude:    []string{"*.tmp"},
+		PreScript:  "pre_script test",
+		PostScript: "post_script test",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -116,6 +126,12 @@ func TestCloudSyncService_CreateTask(t *testing.T) {
 	}
 	if !task.CreateEmptySrcDirs {
 		t.Error("expected create_empty_src_dirs=true")
+	}
+	if task.PreScript != "pre_script test" {
+		t.Errorf("expected pre_script 'pre_script test', got %s", task.PreScript)
+	}
+	if task.PostScript != "post_script test" {
+		t.Errorf("expected post_script 'post_script test', got %s", task.PostScript)
 	}
 }
 
@@ -320,7 +336,8 @@ func TestCloudSyncService_ListTasks(t *testing.T) {
 						"direction": "PUSH", "transfer_mode": "SYNC",
 						"encryption": false, "snapshot": false, "transfers": 4,
 						"bwlimit": [], "exclude": [], "include": [],
-						"follow_symlinks": false, "create_empty_src_dirs": false, "enabled": true
+						"follow_symlinks": false, "create_empty_src_dirs": false, "enabled": true,
+						"pre_script": "pre_script test", "post_script": "post_script test"
 					},
 					{
 						"id": 2, "description": "Task 2", "path": "/mnt/b",
@@ -330,7 +347,8 @@ func TestCloudSyncService_ListTasks(t *testing.T) {
 						"direction": "PULL", "transfer_mode": "COPY",
 						"encryption": false, "snapshot": false, "transfers": 2,
 						"bwlimit": [], "exclude": [], "include": [],
-						"follow_symlinks": false, "create_empty_src_dirs": false, "enabled": false
+						"follow_symlinks": false, "create_empty_src_dirs": false, "enabled": false,
+						"pre_script": "", "post_script": ""
 					}
 				]`), nil
 			},

@@ -63,6 +63,8 @@ type CloudSyncTaskResponse struct {
 	CreateEmptySrcDirs bool                       `json:"create_empty_src_dirs"`
 	Enabled            bool                       `json:"enabled"`
 	Job                *JobStatus                 `json:"job,omitempty"`
+	PreScript          string                     `json:"pre_script"`
+	PostScript         string                     `json:"post_script"`
 }
 
 // BwLimit represents a bandwidth limit entry.
