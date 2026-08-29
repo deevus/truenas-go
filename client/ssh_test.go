@@ -1613,3 +1613,205 @@ func TestSSHClient_ReadFile_RespectsSemaphore(t *testing.T) {
 		t.Errorf("max concurrent sessions = %d, want <= 2", maxActive)
 	}
 }
+
+// --- SSH Agent Auth and NoSudo tests ---
+
+func TestSSHConfig_Validate_AgentMode(t *testing.T) {
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		HostKeyFingerprint: testHostKeyFingerprint,
+		UseAgent:           true,
+		AgentSocket:        "/tmp/test-agent.sock",
+	}
+
+	err := config.Validate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.AgentSocket != "/tmp/test-agent.sock" {
+		t.Errorf("expected agent socket %q, got %q", "/tmp/test-agent.sock", config.AgentSocket)
+	}
+}
+
+func TestSSHConfig_Validate_AgentAndPrivateKeyMutuallyExclusive(t *testing.T) {
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		HostKeyFingerprint: testHostKeyFingerprint,
+		UseAgent:           true,
+		AgentSocket:        "/tmp/test-agent.sock",
+		PrivateKey:         testPrivateKey,
+	}
+
+	err := config.Validate()
+	if err == nil {
+		t.Fatal("expected error for mutually exclusive agent and private key")
+	}
+
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("expected error about mutual exclusivity, got %q", err.Error())
+	}
+}
+
+func TestSSHConfig_Validate_AgentWithEnvSocket(t *testing.T) {
+	t.Setenv("SSH_AUTH_SOCK", "/tmp/env-agent.sock")
+
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		HostKeyFingerprint: testHostKeyFingerprint,
+		UseAgent:           true,
+	}
+
+	err := config.Validate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.AgentSocket != "/tmp/env-agent.sock" {
+		t.Errorf("expected agent socket from env %q, got %q", "/tmp/env-agent.sock", config.AgentSocket)
+	}
+}
+
+func TestSSHConfig_Validate_AgentNoSocketAvailable(t *testing.T) {
+	t.Setenv("SSH_AUTH_SOCK", "")
+
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		HostKeyFingerprint: testHostKeyFingerprint,
+		UseAgent:           true,
+	}
+
+	err := config.Validate()
+	if err == nil {
+		t.Fatal("expected error when no agent socket available")
+	}
+
+	if !strings.Contains(err.Error(), "SSH_AUTH_SOCK") {
+		t.Errorf("expected error mentioning SSH_AUTH_SOCK, got %q", err.Error())
+	}
+}
+
+func TestSSHConfig_Validate_PrivateKeyRequiredWithoutAgent(t *testing.T) {
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		HostKeyFingerprint: testHostKeyFingerprint,
+		UseAgent:           false,
+		PrivateKey:         "",
+	}
+
+	err := config.Validate()
+	if err == nil {
+		t.Fatal("expected error for missing private key without agent")
+	}
+
+	if err.Error() != "private_key is required" {
+		t.Errorf("expected 'private_key is required', got %q", err.Error())
+	}
+}
+
+func TestSSHClient_SudoPrefix_Default(t *testing.T) {
+	client := &SSHClient{
+		config: &SSHConfig{NoSudo: false},
+	}
+
+	prefix := client.sudoPrefix()
+	if prefix != "sudo " {
+		t.Errorf("expected %q, got %q", "sudo ", prefix)
+	}
+}
+
+func TestSSHClient_SudoPrefix_NoSudo(t *testing.T) {
+	client := &SSHClient{
+		config: &SSHConfig{NoSudo: true},
+	}
+
+	prefix := client.sudoPrefix()
+	if prefix != "" {
+		t.Errorf("expected empty prefix, got %q", prefix)
+	}
+}
+
+func TestSSHClient_Call_NoSudo(t *testing.T) {
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		PrivateKey:         testPrivateKey,
+		HostKeyFingerprint: testHostKeyFingerprint,
+		NoSudo:             true,
+	}
+
+	client, err := NewSSHClient(config)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	mockSess := &mockSession{
+		combinedOutputFunc: func(cmd string) ([]byte, error) {
+			expected := `midclt call system.info`
+			if cmd != expected {
+				t.Errorf("expected command %q, got %q", expected, cmd)
+			}
+			return []byte(`{"version": "24.04"}`), nil
+		},
+	}
+
+	mockClient := &mockSSHClient{
+		newSessionFunc: func() (sshSession, error) {
+			return mockSess, nil
+		},
+	}
+
+	client.clientWrapper = mockClient
+
+	result, err := client.Call(context.Background(), "system.info", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if string(result) != `{"version": "24.04"}` {
+		t.Errorf("expected result, got %s", result)
+	}
+}
+
+func TestSSHClient_CallAndWait_NoSudo(t *testing.T) {
+	config := &SSHConfig{
+		Host:               "truenas.local",
+		PrivateKey:         testPrivateKey,
+		HostKeyFingerprint: testHostKeyFingerprint,
+		NoSudo:             true,
+	}
+
+	client, err := NewSSHClient(config)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Set version to 25.x so callAndWaitWithFlag is used
+	client.version = truenas.Version{Major: 25, Minor: 10}
+	client.connected = true
+
+	mockSess := &mockSession{
+		combinedOutputFunc: func(cmd string) ([]byte, error) {
+			expected := `midclt call -j app.create '{"app_name":"test","custom_app":true}'`
+			if cmd != expected {
+				t.Errorf("expected command %q, got %q", expected, cmd)
+			}
+			return []byte(`null`), nil
+		},
+	}
+
+	mockClient := &mockSSHClient{
+		newSessionFunc: func() (sshSession, error) {
+			return mockSess, nil
+		},
+	}
+
+	client.clientWrapper = mockClient
+
+	_, err = client.CallAndWait(context.Background(), "app.create", map[string]any{
+		"app_name":   "test",
+		"custom_app": true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
