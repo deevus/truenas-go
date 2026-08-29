@@ -21,6 +21,18 @@ func sampleAppWithConfigJSON() json.RawMessage {
 	}]`)
 }
 
+// sampleCatalogAppJSON returns a JSON response for a catalog app with metadata.
+func sampleCatalogAppJSON() json.RawMessage {
+	return json.RawMessage(`[{
+		"name": "tailscale",
+		"state": "RUNNING",
+		"custom_app": false,
+		"version": "1.3.32",
+		"human_version": "Tailscale 1.3.32",
+		"metadata": {"name": "tailscale", "train": "community"}
+	}]`)
+}
+
 // sampleRegistryJSON returns a JSON response for a single registry.
 func sampleRegistryJSON() json.RawMessage {
 	return json.RawMessage(`[{

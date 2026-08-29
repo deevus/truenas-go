@@ -20,7 +20,14 @@ type AppResponse struct {
 	HumanVersion     string                     `json:"human_version"`
 	LatestVersion    string                     `json:"latest_version"`
 	UpgradeAvailable bool                       `json:"upgrade_available"`
+	Metadata         AppMetadataResponse        `json:"metadata"`
 	ActiveWorkloads  AppActiveWorkloadsResponse `json:"active_workloads"`
+}
+
+// AppMetadataResponse contains catalog metadata from the API response.
+type AppMetadataResponse struct {
+	Name  string `json:"name"`
+	Train string `json:"train"`
 }
 
 // AppActiveWorkloadsResponse is the wire-format for active workload data.

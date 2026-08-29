@@ -100,6 +100,154 @@ func TestAppFromResponse_WithWorkloads(t *testing.T) {
 	}
 }
 
+func TestAppFromResponse_CatalogApp(t *testing.T) {
+	resp := AppResponse{
+		Name:      "tailscale",
+		State:     "RUNNING",
+		CustomApp: false,
+		Version:   "1.3.32",
+		Metadata: AppMetadataResponse{
+			Name:  "tailscale",
+			Train: "community",
+		},
+	}
+
+	app := appFromResponse(resp)
+
+	if app.CatalogApp != "tailscale" {
+		t.Errorf("expected CatalogApp 'tailscale', got %q", app.CatalogApp)
+	}
+	if app.Train != "community" {
+		t.Errorf("expected Train 'community', got %q", app.Train)
+	}
+	if app.CustomApp {
+		t.Error("expected CustomApp false")
+	}
+	if app.Version != "1.3.32" {
+		t.Errorf("expected Version '1.3.32', got %q", app.Version)
+	}
+}
+
+func TestCreateAppParams_CatalogApp(t *testing.T) {
+	opts := CreateAppOpts{
+		Name:       "tailscale",
+		CatalogApp: "tailscale",
+		Train:      "community",
+	}
+
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if params["app_name"] != "tailscale" {
+		t.Errorf("expected app_name 'tailscale', got %v", params["app_name"])
+	}
+	if params["custom_app"] != false {
+		t.Errorf("expected custom_app false, got %v", params["custom_app"])
+	}
+	if params["catalog_app"] != "tailscale" {
+		t.Errorf("expected catalog_app 'tailscale', got %v", params["catalog_app"])
+	}
+	if params["train"] != "community" {
+		t.Errorf("expected train 'community', got %v", params["train"])
+	}
+	if _, ok := params["custom_compose_config_string"]; ok {
+		t.Error("expected no custom_compose_config_string for catalog app")
+	}
+}
+
+func TestCreateAppParams_CatalogAppWithValues(t *testing.T) {
+	opts := CreateAppOpts{
+		Name:       "tailscale",
+		CatalogApp: "tailscale",
+		Train:      "community",
+		Version:    "1.3.32",
+		Values:     map[string]any{"tailscale": map[string]any{"auth_key": "tskey-xxx"}},
+	}
+
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if params["catalog_app"] != "tailscale" {
+		t.Errorf("expected catalog_app 'tailscale', got %v", params["catalog_app"])
+	}
+	if params["version"] != "1.3.32" {
+		t.Errorf("expected version '1.3.32', got %v", params["version"])
+	}
+	values, ok := params["values"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected values map, got %T", params["values"])
+	}
+	ts, ok := values["tailscale"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected tailscale values map, got %T", values["tailscale"])
+	}
+	if ts["auth_key"] != "tskey-xxx" {
+		t.Errorf("expected auth_key 'tskey-xxx', got %v", ts["auth_key"])
+	}
+}
+
+func TestUpdateAppParams_WithValues(t *testing.T) {
+	opts := UpdateAppOpts{
+		Values: map[string]any{"TZ": "America/New_York"},
+	}
+
+	params := updateAppParams(opts)
+
+	values, ok := params["values"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected values map, got %T", params["values"])
+	}
+	if values["TZ"] != "America/New_York" {
+		t.Errorf("expected TZ 'America/New_York', got %v", values["TZ"])
+	}
+}
+
+func TestCreateAppParams_CatalogAndCustomAppError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name:       "confused",
+		CustomApp:  true,
+		CatalogApp: "plex",
+	})
+	if err == nil {
+		t.Fatal("expected error when both CatalogApp and CustomApp are set")
+	}
+}
+
+func TestCreateAppParams_CatalogAndComposeConfigError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name:                "confused",
+		CatalogApp:          "plex",
+		CustomComposeConfig: "services:\n  web:\n    image: nginx",
+	})
+	if err == nil {
+		t.Fatal("expected error when both CatalogApp and CustomComposeConfig are set")
+	}
+}
+
+func TestCreateAppParams_NeitherCatalogNorCustomError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name: "nothing",
+	})
+	if err == nil {
+		t.Fatal("expected error when neither CatalogApp nor CustomApp is set")
+	}
+}
+
+func TestCreateAppParams_ValuesWithCustomAppError(t *testing.T) {
+	_, err := createAppParams(CreateAppOpts{
+		Name:      "bad",
+		CustomApp: true,
+		Values:    map[string]any{"TZ": "UTC"},
+	})
+	if err == nil {
+		t.Fatal("expected error when Values is used with CustomApp")
+	}
+}
+
 func TestRegistryFromResponse(t *testing.T) {
 	desc := "A registry"
 	resp := AppRegistryResponse{
@@ -157,7 +305,10 @@ func TestCreateAppParams(t *testing.T) {
 		CustomComposeConfig: "version: '3'",
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["app_name"] != "my-app" {
 		t.Errorf("expected app_name my-app, got %v", params["app_name"])
@@ -170,19 +321,22 @@ func TestCreateAppParams(t *testing.T) {
 	}
 }
 
-func TestCreateAppParams_NoCompose(t *testing.T) {
+func TestCreateAppParams_CustomAppNoCompose(t *testing.T) {
 	opts := CreateAppOpts{
 		Name:      "simple-app",
-		CustomApp: false,
+		CustomApp: true,
 	}
 
-	params := createAppParams(opts)
+	params, err := createAppParams(opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if params["app_name"] != "simple-app" {
 		t.Errorf("expected app_name simple-app, got %v", params["app_name"])
 	}
-	if params["custom_app"] != false {
-		t.Errorf("expected custom_app false, got %v", params["custom_app"])
+	if params["custom_app"] != true {
+		t.Errorf("expected custom_app true, got %v", params["custom_app"])
 	}
 	if _, ok := params["custom_compose_config_string"]; ok {
 		t.Error("expected no custom_compose_config_string for empty config")
